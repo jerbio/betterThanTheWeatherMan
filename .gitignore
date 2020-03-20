@@ -1,0 +1,3 @@
+LibFiles/temp/*
+LibFiles/__pycache__/*
+TrainingData/StockDump/*
