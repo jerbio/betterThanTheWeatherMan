@@ -6,6 +6,12 @@ downloadStockBySymbol("GOOG") # This downloads the time ticker data
 
 tickerData = load_time_series_daily("GOOG") # Generates sequential data
 
+
+
+
+    
+
+
 # # line 1 points 
 x1 = range(0, len(tickerData));
 y1 = tickerData;
