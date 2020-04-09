@@ -8,7 +8,7 @@ stockGroupings = {
     "finance": ["MS", "GS", "BAC"],
     "travel": ["AAL", "DAL", "UAL"],
     "weed": ["CRON", "ACB", "CBDS"],
-    "retail": ["WMT", "TGT", ]
+    "retail": ["WMT", "TGT", "WBA"]
     };
 filePath = "d:\\WeatherManDump"
 for key in stockGroupings:
