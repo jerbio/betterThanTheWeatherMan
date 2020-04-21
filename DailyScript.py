@@ -1,5 +1,5 @@
-from LibFiles.downloadStockData import downloadStockBySymbol
-from LibFiles.loadDataSeries import load_time_series_daily
+from libfiles.downloadStockData import downloadStockBySymbol
+from libfiles.loadDataSeries import load_time_series_daily
 import matplotlib.pyplot as plt 
 
 stockGroupings = {
@@ -9,7 +9,7 @@ stockGroupings = {
     "travel": ["AAL", "DAL", "UAL"],
     "weed": ["CRON", "ACB", "CBDS"],
     "retail": ["WMT", "TGT", "WBA"]
-    };
+    }
 filePath = "d:\\WeatherManDump"
 for key in stockGroupings:
     seriesType = "TIME_SERIES_INTRADAY"
