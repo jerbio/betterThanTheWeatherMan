@@ -1,4 +1,5 @@
 LibFiles/temp/*
 LibFiles/__pycache__/*
 TrainingData/StockDump/*
+*__pycache__
 .vscode

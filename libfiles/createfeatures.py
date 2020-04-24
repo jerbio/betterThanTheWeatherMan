@@ -1,6 +1,6 @@
 import json
 import datetime
-from  loadDataSeries import load_time_series_daily
+from  loaddataseries import load_time_series_daily
 
 tickerData = load_time_series_daily("AMD")
 

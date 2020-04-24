@@ -1,5 +1,5 @@
-from downloadStockData import downloadStockBySymbol
-from loadDataSeries import load_time_series_daily
+from downloadstockdata import downloadStockBySymbol
+from loaddataseries import load_time_series_daily
 import matplotlib.pyplot as plt 
 
 downloadStockBySymbol("CRON") # This downloads the time ticker data
