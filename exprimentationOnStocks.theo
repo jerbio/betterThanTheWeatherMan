@@ -1,0 +1,7 @@
+Note 1
+Observation: Noticed if I buy at opening price within three days there will be 1% pop in price 80% of the time for blue chip stocks like goog, AMD and IBM
+Possible new experiment: May be I need to select the days where there was not a pop and then train to see if there is a detectable pattern. I might need multiple stocks to prove this.
+
+Note 2
+Observation: Noticed if I buy at opening price within three days there will be 1% pop in price 80% of the time for blue chip stocks like goog, AMD and IBM
+Possible new experiment: What if I try the three days without the current day. This is because you want to make it more realistic and similar to robinhoods implementation which doesnt allow day trading
