@@ -105,12 +105,17 @@ def processTimeSeries_DayToStock(timeSeriesDict):
                 ""+tickerKey+"": tickerData
             };
         openPrice = float(timeData["1. open"]);
-        closePrice = float(timeData["4. close"]);
         lowestPrice = float(timeData["3. low"]);
         highstPrice = float(timeData["2. high"]);
+        closePrice = float(timeData["4. close"]);
+        avgPrice = (closePrice + openPrice)/2
+        
+        
         tickerData.append(openPrice);
         tickerData.append(lowestPrice);
         tickerData.append(highstPrice);
         tickerData.append(closePrice);
+        tickerData.append(avgPrice);
+        
     
     return retValue;

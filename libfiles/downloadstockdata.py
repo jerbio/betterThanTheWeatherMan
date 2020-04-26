@@ -45,7 +45,8 @@ def updateLastBatchRequest():
 def downloadStockBySymbol (
     symbol = "MSFT",
     series_type = "TIME_SERIES_DAILY",
-    filePath = ""
+    filePath = "",
+    ignoreIfExists = False
     ):
     dirname = os.path.dirname(__file__)
 
@@ -66,6 +67,12 @@ def downloadStockBySymbol (
     now = datetime.now();
 
     fullFolderPath = folderPath +"\\"+ series_type+"\\"+symbol;
+
+    pathLookup = filePath if filePath else os.path.join(dirname, fullFolderPath)
+    if ignoreIfExists and os.path.exists(pathLookup):
+        print("Not downloading "+symbol+" because already exists" )
+        return
+
     lastEntry = getTimeOfLastRequest();
     print("Last update is ", lastEntry)
     global currentRequestCount;
@@ -90,10 +97,11 @@ def downloadStockBySymbol (
 def groupSymbolRequest(
     symbols,
     series_type = "TIME_SERIES_DAILY",
-    filePath = ""
+    filePath = "",
+    ignoreIfExists = False
     ):
     for symbol in symbols:
-        downloadStockBySymbol(symbol, series_type, filePath)
+        downloadStockBySymbol(symbol, series_type, filePath, ignoreIfExists)
 
 
 def sendRequests(PARAMS, folderPath):

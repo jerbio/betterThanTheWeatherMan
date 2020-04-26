@@ -3,7 +3,6 @@ import datetime
 import random
 import tensorflow as tf
 from tensorflow import keras
-
 import sys
 import os
 
@@ -11,8 +10,14 @@ PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
-from libfiles.loadDataSeries import load_time_series_daily
+from libfiles.loaddataseries import load_time_series_daily
 
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
+# config.log_device_placement = True  # to log device placement (on which device the operation ran)
+#                                     # (nothing gets printed in Jupyter, only if you run it standalone)
+# sess = tf.Session(config=config)
+# set_session(sess)  # set this TensorFlow session as the default session for Keras
 
 
 # This works by looking forward into a given number of days from a given day.
@@ -21,25 +26,29 @@ from libfiles.loadDataSeries import load_time_series_daily
 
 
 
-tickerData = load_time_series_daily("AMD")
 
-
-
-
-def getDayOutlook(tickerData, earliestDay, dayCount = 3):
+def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
     '''
-    function generates a 'dayCount' day data of the stock market it gets the percentage hikes of each day after a given day
+    function generates a 'dayCount' day data of the stock market it gets the percentage hikes of each day after a given day, excluding the current day
+    earliestDay holds the earliest day to which you don't want to pull ticker data
     '''
     beginningOfTime_str = "1970-01-01 00:00:00"
     beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
     retValue = {
 
     }
+    earliestDayInt = 0
+    if earliestDay:
+        earliestDayInt = (earliestDay - beginningOfTime).days
+
     for day in tickerData:
-        dayAsInt = int(day)
         currentDay = beginningOfTime + datetime.timedelta(days=(day))
+        if day < earliestDayInt:
+            continue
+        dayAsInt = int(day)
         openPrice = tickerData[day]["ticker"][0]
         highPrice = tickerData[day]["ticker"][2]
+        closePrice = tickerData[day]["ticker"][3]
         nextDaySeriesIndexes = []
         nextDaySeriesChanges = []
         precedingNintyDays = []
@@ -50,19 +59,19 @@ def getDayOutlook(tickerData, earliestDay, dayCount = 3):
         ignoreDay = False
         maxPositive = 0
         maxNegative = 0
-        while counter < dayCount and len(nextDaySeriesIndexes)<3:
+        while counter < (dayCount+1) and len(nextDaySeriesIndexes)<4:
             dayIndex = day+counter
-            if dayIndex in tickerData:
+            if dayIndex in tickerData and dayIndex != day :
                 activeDayCounter += 1
                 dayData = tickerData[dayIndex]
                 nextDaySeriesIndexes.append(dayData)
                 sevenDayOpenPrice = dayData["ticker"][0]
                 sevenDayHighPrice = dayData["ticker"][2]
-                deltaOpen = sevenDayOpenPrice - openPrice
-                deltaHigh = sevenDayHighPrice - openPrice
+                deltaOpen = sevenDayOpenPrice - closePrice
+                deltaHigh = sevenDayHighPrice - closePrice
 
-                percentOpen = (deltaOpen/openPrice) * 100
-                percentHigh = (deltaHigh/openPrice) * 100
+                percentOpen = (deltaOpen/closePrice) * 100
+                percentHigh = (deltaHigh/closePrice) * 100
                 dayDiff = counter
                 outlookDay = currentDay + datetime.timedelta(days=(dayDiff))
                 weekDay = outlookDay.weekday()
@@ -75,6 +84,9 @@ def getDayOutlook(tickerData, earliestDay, dayCount = 3):
                         highestDelta = int(abs(percentHigh))
                         isNegative = percentHigh < 0
 
+                # if highestDelta > 3:#ignore days with higher than 4% swings
+                #     ignoreDay = True
+                #     break
 
                 if percentOpen > 0 and percentOpen > maxPositive:
                     maxPositive = percentOpen
@@ -85,13 +97,15 @@ def getDayOutlook(tickerData, earliestDay, dayCount = 3):
                     maxNegative = percentOpen
                 if percentHigh < 0 and percentHigh < maxNegative:
                     maxNegative = percentHigh
-                
+
 
                 nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay])
             counter += 1
-        
+
+        tickerCountPerDay = -1
+        dayCountForFeatures = 90
         if not ignoreDay:
-            earliestPossibleDay = int(day) - 90
+            earliestPossibleDay = int(day) - dayCountForFeatures
             retryCount = 3
             foundEarliestDay = False
             while retryCount > 0:
@@ -100,22 +114,89 @@ def getDayOutlook(tickerData, earliestDay, dayCount = 3):
                     break
                 earliestPossibleDay -= 1
                 retryCount -= 1
-            
+
+
+
             if foundEarliestDay:
                 while earliestPossibleDay < dayAsInt:
                     if earliestPossibleDay in tickerData:
                         featureDay = beginningOfTime + datetime.timedelta(days=(earliestPossibleDay))
                         weekDay = featureDay.weekday()
                         tickerEntry = tickerData[earliestPossibleDay]
-                        precedingNintyDays.append(tickerEntry['ticker'][0])
-                        precedingNintyDays.append(tickerEntry['ticker'][1])
-                        precedingNintyDays.append(tickerEntry['ticker'][2])
-                        precedingNintyDays.append(tickerEntry['ticker'][3])
-                        precedingNintyDays.append(weekDay)
+                        dataForDay = []
+                        fiveDayAvgPriceDelta = None
+                        previousDayCountLimit = 4
+                        previousDayCounter = previousDayCountLimit
+                        previousDayCount = earliestPossibleDay
+                        previousDayCountLoopLimit = previousDayCountLimit + 4
+                        finalPreviousDayIndex = earliestPossibleDay
+                        tradingDayCount = 0
+                        while previousDayCounter > 0 and previousDayCountLoopLimit > 0:
+                            previousDayCount -=1
+                            if previousDayCount in tickerData:
+                                previousDayCounter -= 1
+                                finalPreviousDayIndex = previousDayCount
+                                tradingDayCount += 1
+                            previousDayCountLoopLimit -= 1
+
+                        openCloseDelta = tickerEntry['ticker'][3] - tickerEntry['ticker'][0]
+                        openLowDelta = tickerEntry['ticker'][1] - tickerEntry['ticker'][0]
+                        openHighDelta = tickerEntry['ticker'][2] - tickerEntry['ticker'][0]
+                        highLowDelta = tickerEntry['ticker'][2] - tickerEntry['ticker'][1]
+                        if previousDayCounter != previousDayCountLimit:
+                            previousDayTickerEntry = tickerData[finalPreviousDayIndex]
+                            fiveDayAvgPriceDelta = (tickerEntry['ticker'][4] - previousDayTickerEntry['ticker'][4])
+
+
+                        percentOpenCloseDelta = (openCloseDelta / tickerEntry['ticker'][0]) *100
+                        percentHighDelta = (openHighDelta / tickerEntry['ticker'][0]) * 100
+                        percentOpenLowDelta = (openLowDelta / tickerEntry['ticker'][0])*100
+                        percentHighLowDelta = (highLowDelta / tickerEntry['ticker'][0])*100
+
+                        percentCloseDelta = (openHighDelta / tickerEntry['ticker'][3])* 100
+                        percentCloseLowDelta = (openLowDelta / tickerEntry['ticker'][3]) * 100
+                        percentCloseLowDelta = (highLowDelta / tickerEntry['ticker'][3]) * 100
+                        dataForDay.append(percentCloseDelta)
+                        dataForDay.append(percentCloseLowDelta)
+                        dataForDay.append(percentCloseLowDelta)
+
+
+
+
+                        dataForDay.append(percentOpenCloseDelta)
+                        dataForDay.append(percentHighDelta)
+                        dataForDay.append(percentOpenLowDelta)
+                        dataForDay.append(percentHighLowDelta)
+
+                        tradingDayDelta = 0
+                        percentageTradingDayDelta = 0
+                        if fiveDayAvgPriceDelta is None:
+                            percentFiveDayDelta = percentOpenCloseDelta;
+                        else:
+                            percentFiveDayDelta = (fiveDayAvgPriceDelta/tickerEntry['ticker'][0])
+                            tradingDayDelta = fiveDayAvgPriceDelta/tradingDayCount
+                            percentageTradingDayDelta = ((fiveDayAvgPriceDelta/tickerEntry['ticker'][0]) * 100)/tradingDayCount
+                        
+                        dataForDay.append(percentFiveDayDelta)
+                        dataForDay.append(tradingDayDelta)
+                        dataForDay.append(percentageTradingDayDelta)
+
+                        dataForDay.append(tickerEntry['ticker'][0])
+                        dataForDay.append(tickerEntry['ticker'][1])
+                        dataForDay.append(tickerEntry['ticker'][2])
+                        dataForDay.append(tickerEntry['ticker'][3])
+                        dataForDay.append(tickerEntry['ticker'][4])
+                        # dataForDay.append(weekDay)
+                        if tickerCountPerDay < 1:
+                            tickerCountPerDay = len(dataForDay)
+                        precedingNintyDays.extend(dataForDay)
                     earliestPossibleDay +=1
-            dayLimit = 90
-            deltaLimit = 2
-            if len(precedingNintyDays) > 30:
+            dayLimit = dayCountForFeatures - 30
+
+            if tickerCountPerDay > 0:
+                dayLimit = dayLimit * tickerCountPerDay
+            deltaLimit = 1
+            if len(precedingNintyDays) > dayLimit:
                 dayCount = len(precedingNintyDays)
                 precedingNintyDays = precedingNintyDays[(dayCount - dayLimit):dayCount]
                 maxDelta = 1 if maxPositive > deltaLimit else 0
@@ -128,19 +209,31 @@ def getDayOutlook(tickerData, earliestDay, dayCount = 3):
     return retValue
 
 
-def convertToTensors(dictOfPrecedingDaysTo, testRatio):
+def convertToTensors(tickerData, testRatio):
     resultToData = {}
     retValue = {}
 
-    for dayCount in dictOfPrecedingDaysTo:
-        precedingDays = dictOfPrecedingDaysTo[dayCount]["precedingDays"]
-        result = dictOfPrecedingDaysTo[dayCount]["maxDelta"]
-        if result in resultToData:
-            resultToData[result].append(precedingDays)
-        else:
-            collection = []
-            collection.append(precedingDays)
-            resultToData[result] = collection
+    for key in tickerData:
+        dictOfPrecedingDaysTo = tickerData[key]
+        for dayCount in dictOfPrecedingDaysTo:
+            precedingDays = dictOfPrecedingDaysTo[dayCount]["precedingDays"]
+            result = dictOfPrecedingDaysTo[dayCount]["maxDelta"]
+            if result in resultToData:
+                resultToData[result].append(precedingDays)
+            else:
+                collection = []
+                collection.append(precedingDays)
+                resultToData[result] = collection
+
+
+    minCount = None
+    for key in resultToData:
+        count = len(resultToData[key])
+        if minCount is None or count < minCount:
+            minCount = count
+
+    for key in resultToData:
+        resultToData[key] = resultToData[key][:minCount]
 
     percentageDiff = []
     for key in resultToData.keys():
@@ -158,25 +251,25 @@ def convertToTensors(dictOfPrecedingDaysTo, testRatio):
     trainData = []
     trainResult = []
     testResult = []
+    randomPause=9
     for result in resultToData:
         allData = resultToData[result]
         totalCount =  len(allData)
         testCount = round(testRatio * totalCount)
-        
 
-        for dataSeries in allData:
-            isForTest = False
-            # dataSeries = allData[index]
+        indexes = list(range(totalCount))
+        random.shuffle(indexes)
+
+        for index in indexes:
+            dataSeries = allData[index]
             if testCount > 0:
-                isForTest = bool(random.getrandbits(1))
                 testCount -=1
-            if isForTest:
                 testData.append(dataSeries)
                 testResult.append(percentToIndex[result])
             else:
                 trainData.append(dataSeries)
                 trainResult.append(percentToIndex[result])
-        
+
         # retValue[result] = (testData, trainData)
 
 
@@ -184,8 +277,8 @@ def convertToTensors(dictOfPrecedingDaysTo, testRatio):
 
     model = keras.Sequential([
         # keras.layers.Flatten(input_shape=(28, 28)),
-        keras.layers.Dense(16, activation='relu'),
-        keras.layers.Dense(16, activation='relu'),
+        keras.layers.Dense(256, activation='relu'),
+        keras.layers.Dense(256, activation='relu'),
         keras.layers.Dense(optionCount)
     ])
     numberOfEpochs = 100
@@ -194,6 +287,9 @@ def convertToTensors(dictOfPrecedingDaysTo, testRatio):
         learning_rate=learningRate, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False,
         name='Adam'
     )
+    # optimizer = tf.compat.v1.train.GradientDescentOptimizer(
+    #     learning_rate = learningRate, use_locking=False, name='GradientDescent'
+    # )
     model.compile(optimizer=optimizer,
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=['accuracy'])
@@ -204,22 +300,27 @@ def convertToTensors(dictOfPrecedingDaysTo, testRatio):
 
     test_loss, test_acc = model.evaluate(testData,  testResult, verbose=2)
     print('\nTest accuracy:', test_acc)
-        
 
 
-def runExec():
+
+def runExec(tickerSymbols = None):
+    defaultSymbol = "MMM"
     constDayNumber = 678687647816781687
-    earliestDay = constDayNumber
+    earliestDayInTickerData = constDayNumber
+    currentTime = datetime.datetime.now()
+    years = 1
+    daysPerYear = 365
+    totalDays = years * daysPerYear
+    earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
+    if not tickerSymbols:
+        tickerSymbols = [defaultSymbol]
 
-    for key in tickerData.keys():
-        dayIndex = int(key)
-        if dayIndex < earliestDay:
-            earliestDay = dayIndex
+    symbolToDayData = {}
+    for symbol in tickerSymbols:
+        if symbol not in symbolToDayData:
+            tickerData = load_time_series_daily(symbol)
+            outlookResult = getDayOutlook(tickerData, earliestTime)
+            symbolToDayData[symbol] = outlookResult
 
-    if earliestDay != constDayNumber:
-        outlookResult = getDayOutlook(tickerData, earliestDay)
-        # print(outlookResult);
-        
-        convertToTensors(outlookResult, 0.3)
-        
-        jsonDump = json.dumps(outlookResult)
+    convertToTensors(symbolToDayData, 0.3)
+
