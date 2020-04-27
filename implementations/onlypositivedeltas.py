@@ -171,7 +171,7 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                         tradingDayDelta = 0
                         percentageTradingDayDelta = 0
                         if fiveDayAvgPriceDelta is None:
-                            percentFiveDayDelta = percentOpenCloseDelta;
+                            percentFiveDayDelta = percentOpenCloseDelta
                         else:
                             percentFiveDayDelta = (fiveDayAvgPriceDelta/tickerEntry['ticker'][0])
                             tradingDayDelta = fiveDayAvgPriceDelta/tradingDayCount
@@ -251,7 +251,6 @@ def convertToTensors(tickerData, testRatio):
     trainData = []
     trainResult = []
     testResult = []
-    randomPause=9
     for result in resultToData:
         allData = resultToData[result]
         totalCount =  len(allData)
@@ -308,7 +307,7 @@ def runExec(tickerSymbols = None):
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 1
+    years = 5
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
