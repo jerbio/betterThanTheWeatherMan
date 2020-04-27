@@ -23,9 +23,146 @@ from libfiles.loaddataseries import load_time_series_daily
 # This works by looking forward into a given number of days from a given day.
 # It generates a collecion of all the deltass of the future days high from the a given days opening price
 # Any day with delta higher than 'deltaLimit' will be set to some max value
+tickerFeaturesPerDay = -1
+def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
+    retValue = []
+    cons_loop_counter = 7 # seven because a stock might not have data for a week
+    maxCountLoop = cons_loop_counter
+    validDayIndex = currentDayIndex - 1
+    while validDayIndex not in tickerDictionary and maxCountLoop > 0:
+        validDayIndex -= 1
+        maxCountLoop -= 1
+    
+    maxCountLoop = cons_loop_counter
+    insertedDayCount = 0
+    while maxCountLoop > 0 and insertedDayCount < dayCount:
+        if validDayIndex in tickerDictionary:
+            insertedDayCount +=1
+            retValue.append(validDayIndex)
+        else:
+            maxCountLoop -= 1
+        
+        validDayIndex-=1
+    
+    return retValue
 
 
 
+def getPreceedingDayFeatures(dayIndex, timeData):
+    earliestDay = dayIndex - 91
+    dayIndexesDict = {}
+    tickerInfo = timeData[dayIndex]
+    loopDayIndex = dayIndex
+    foundEarliestDay = False
+    while not foundEarliestDay:
+        sevenDayIndexes = precedingDayIndexes(loopDayIndex, 7, timeData)
+        maxPriceKey = 'highprice'
+        lowPriceKey = 'lowprice'
+        dayIndexesDict[loopDayIndex] = {
+            'indexes': sevenDayIndexes,
+            ''+maxPriceKey+'': None,
+            ''+lowPriceKey+'': None
+        }
+
+        if len(sevenDayIndexes) == 0:
+            print("YOUZ about to fail")
+            print("Failing day index is " + str(loopDayIndex))
+            allKeys = list(timeData.keys())
+            allKeys.sort()
+            precedingDayIndexes(loopDayIndex, 7, timeData)
+            # print( allKeys)
+            # return None
+            
+            # precedingDayIndexes(loopDayIndex, 7, timeData)
+        
+        loopEarliestDay = sevenDayIndexes[len(sevenDayIndexes) -1]
+        if loopEarliestDay > earliestDay:
+            loopDayIndex = loopEarliestDay - 1
+        else:
+            foundEarliestDay = True
+            break
+
+    def sortByHighPrice(x, y):
+        return x[maxPriceKey][1] - y[maxPriceKey][1]
+    
+    def sortByLowPrice(x, y):
+        return x[lowPriceKey][1] - y[lowPriceKey][1]
+    allMaxes = []
+    for key in dayIndexesDict:
+        dayIndexes = dayIndexesDict[key]['indexes']
+        maxPrices = [(index, timeData[index]["ticker"][1], timeData[index]["ticker"][2]) for index in dayIndexes]
+        maxEntry = []
+        minEntry = []
+        for priceTuple in maxPrices:# gets the highest and minimum for the given week
+            if len(maxEntry) == 0 or maxEntry[1] < priceTuple[2]:
+                maxEntry = [priceTuple[0], priceTuple[2]]
+            if len(minEntry) == 0 or minEntry[1] > priceTuple[1]:
+                minEntry = [priceTuple[0], priceTuple[1]]
+
+        if len(maxEntry) != 0: 
+            dayIndexesDict[key][maxPriceKey] = maxEntry
+        if len(minEntry) != 0: 
+            dayIndexesDict[key][lowPriceKey] = minEntry
+    
+    allvalues = list(dayIndexesDict.values())
+    
+    inflextionCount = 3
+    sortedByHigh =sorted(allvalues, key=lambda highPrice: highPrice[maxPriceKey][1])
+    sortedByLow =sorted(allvalues, key=lambda lowPrice: lowPrice[lowPriceKey][1])
+
+    highestInflexionPoints = sortedByHigh[len(sortedByHigh)-inflextionCount:]
+    lowestInflextionPoints = sortedByLow[:inflextionCount]
+    openPrice = tickerInfo['ticker'][0]
+    lowestPrice = tickerInfo['ticker'][1]
+    highestPrice = tickerInfo['ticker'][2]
+    closePrice = tickerInfo['ticker'][3]
+    avgPrice = tickerInfo['ticker'][4]
+    
+    def getFeatureForInflection(inflexionPoints):
+        dayDeltas = []
+        currentDayDiff = 0
+        diffBetweenDeltas = []
+        avgPriceGradient = []
+        lowPriceGradient = []
+        highestPriceGradient = []
+        averageDelta = 0
+        for inflexionPoint in inflexionPoints:
+            inflexionDayIndex = inflexionPoint[0]
+            inflexionDayPrice = inflexionPoint[1]
+            if dayIndex != inflexionDayIndex:
+                dayDiff = dayIndex - inflexionPoint[0] 
+                dayDeltas.append(dayDiff)
+                diffBetweenDelta = dayDiff - currentDayDiff
+                diffBetweenDeltas.append(diffBetweenDelta)
+                gradientAvgPriceForDay = (avgPrice - inflexionDayPrice)/dayDiff
+                avgPriceGradient.append(gradientAvgPriceForDay)
+                gradientLowPriceForDay = (lowestPrice - inflexionDayPrice)/dayDiff
+                lowPriceGradient.append(gradientLowPriceForDay)
+                gradientHighPriceForDay = (highestPrice - inflexionDayPrice)/dayDiff
+                highestPriceGradient.append(gradientHighPriceForDay)
+
+        if len(diffBetweenDeltas) != 0:
+            averageDelta = sum(diffBetweenDeltas)/len(diffBetweenDeltas)
+
+        retValue = []
+        retValue.append(averageDelta)
+        retValue.extend(avgPriceGradient)
+        retValue.extend(diffBetweenDeltas)
+        retValue.extend(highestPriceGradient)
+        retValue.extend(lowPriceGradient)
+        return retValue
+
+
+
+    highestInflextionPointFeatures = getFeatureForInflection(
+        [[data[maxPriceKey][0], data[maxPriceKey][1]] for data in highestInflexionPoints]
+        )
+    lowestInflextionPointsFeatures = getFeatureForInflection(
+        [[data[lowPriceKey][0], data[lowPriceKey][1]] for data in lowestInflextionPoints]
+        )
+
+    retValue = (lowestInflextionPointsFeatures, highestInflextionPointFeatures)
+    return retValue
 
 def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
     '''
@@ -37,6 +174,7 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
     retValue = {
 
     }
+    global tickerFeaturesPerDay
     earliestDayInt = 0
     if earliestDay:
         earliestDayInt = (earliestDay - beginningOfTime).days
@@ -102,7 +240,6 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                 nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay])
             counter += 1
 
-        tickerCountPerDay = -1
         dayCountForFeatures = 90
         if not ignoreDay:
             earliestPossibleDay = int(day) - dayCountForFeatures
@@ -160,9 +297,6 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                         dataForDay.append(percentCloseLowDelta)
                         dataForDay.append(percentCloseLowDelta)
 
-
-
-
                         dataForDay.append(percentOpenCloseDelta)
                         dataForDay.append(percentHighDelta)
                         dataForDay.append(percentOpenLowDelta)
@@ -186,15 +320,23 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                         dataForDay.append(tickerEntry['ticker'][2])
                         dataForDay.append(tickerEntry['ticker'][3])
                         dataForDay.append(tickerEntry['ticker'][4])
+
+                        inflectionPointFeatures = getPreceedingDayFeatures(dayAsInt, tickerData)
+                        if inflectionPointFeatures is not None:
+                            dataForDay.extend(inflectionPointFeatures[0])
+                            dataForDay.extend(inflectionPointFeatures[1])
+                            precedingNintyDays.extend(dataForDay)
                         # dataForDay.append(weekDay)
-                        if tickerCountPerDay < 1:
-                            tickerCountPerDay = len(dataForDay)
-                        precedingNintyDays.extend(dataForDay)
+                        featureLen = len(dataForDay)
+                        if tickerFeaturesPerDay < featureLen:
+                            tickerFeaturesPerDay = featureLen
+                        
+                        
                     earliestPossibleDay +=1
             dayLimit = dayCountForFeatures - 30
 
-            if tickerCountPerDay > 0:
-                dayLimit = dayLimit * tickerCountPerDay
+            if tickerFeaturesPerDay > 0:
+                dayLimit = dayLimit * tickerFeaturesPerDay
             deltaLimit = 1
             if len(precedingNintyDays) > dayLimit:
                 dayCount = len(precedingNintyDays)
@@ -319,8 +461,16 @@ def runExec(tickerSymbols = None):
     for symbol in tickerSymbols:
         if symbol not in symbolToDayData:
             tickerData = load_time_series_daily(symbol)
-            outlookResult = getDayOutlook(tickerData, earliestTime)
-            symbolToDayData[symbol] = outlookResult
+            print("symbol is "+ str(symbol))
+            stockDataDayCount = len(tickerData)
+            if stockDataDayCount > totalDays:
+                outlookResult = getDayOutlook(tickerData, earliestTime)
+                symbolToDayData[symbol] = outlookResult
+            else:
+                print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
 
-    convertToTensors(symbolToDayData, 0.3)
+    if len(symbolToDayData) > 0:
+        convertToTensors(symbolToDayData, 0.3)
+    else:
+        print("Could not find data to process")
 

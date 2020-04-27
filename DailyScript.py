@@ -1,5 +1,5 @@
-from libfiles.downloadStockData import downloadStockBySymbol
-from libfiles.loadDataSeries import load_time_series_daily
+from libfiles.downloadstockdata import downloadStockBySymbol
+from libfiles.loaddataseries import load_time_series_daily
 import matplotlib.pyplot as plt 
 
 stockGroupings = {

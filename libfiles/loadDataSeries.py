@@ -1,28 +1,45 @@
 import os
 import json
 import datetime
+from .downloadstockdata import downloadStockBySymbol
 
-def load_time_series_daily(
-    symbol
-    ):
+def getStockFileNames(symbol, series_type):
     walk = os.walk;
-    series_type = "TIME_SERIES_DAILY";
+    # series_type = "TIME_SERIES_DAILY";
     dirname = os.path.dirname(__file__)
-    retValue = [];
+    retValue = {};
 
     fullFolderPath = "..\\TrainingData\\StockDump\\"+series_type+"\\"+symbol+"\\";
     pathFoFolder = dirname+"\\..\\TrainingData\\StockDump\\"+series_type+"\\"+symbol+"\\";
     fullFolderPath = pathFoFolder
-    allNames = []
     for (dirpath, dirnames, filenames) in walk(fullFolderPath):
-        allNames.extend(filenames)
+        for fileName in filenames:
+            fullFileName = fullFolderPath+fileName;
+            retValue[fileName] = (fileName, fullFileName);
+    
+    return retValue
 
-    allNames.sort()
+
+def load_time_series_daily(
+    symbol, 
+    series_type = "TIME_SERIES_DAILY",
+    downloadIfNotFound = True
+    ):
+    retValue = []
+    allNames = getStockFileNames(symbol, series_type)
     latestFileName = "";
     jsonObj = "";
+
+    if len(allNames) < 1 and downloadIfNotFound:
+        downloadStockBySymbol(symbol, series_type)
+
+
     if(len(allNames) > 0):
-        latestFileName = allNames[len(allNames) - 1];
-        jsonFileName = fullFolderPath+latestFileName;
+        for fileName in allNames:
+            namePathTuple = allNames[fileName]
+            latestFileName = namePathTuple[0];
+            jsonFileName = namePathTuple[1];
+            break;
 
         #Read JSON data into the datastore variable
         if latestFileName:
@@ -88,12 +105,17 @@ def processTimeSeries_DayToStock(timeSeriesDict):
                 ""+tickerKey+"": tickerData
             };
         openPrice = float(timeData["1. open"]);
-        closePrice = float(timeData["4. close"]);
         lowestPrice = float(timeData["3. low"]);
         highstPrice = float(timeData["2. high"]);
+        closePrice = float(timeData["4. close"]);
+        avgPrice = (closePrice + openPrice)/2
+        
+        # DO NOT CHANGE THE APPEND ORDER 
         tickerData.append(openPrice);
         tickerData.append(lowestPrice);
         tickerData.append(highstPrice);
         tickerData.append(closePrice);
+        tickerData.append(avgPrice);
+        
     
     return retValue;
