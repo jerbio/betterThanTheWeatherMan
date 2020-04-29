@@ -143,13 +143,14 @@ def getPreceedingDayFeatures(dayIndex, timeData):
 
         if len(diffBetweenDeltas) != 0:
             averageDelta = sum(diffBetweenDeltas)/len(diffBetweenDeltas)
-
+        averagePriceDelta = sum(avgPriceGradient)/len(avgPriceGradient)
         retValue = []
         retValue.append(averageDelta)
         retValue.extend(avgPriceGradient)
-        retValue.extend(diffBetweenDeltas)
-        retValue.extend(highestPriceGradient)
-        retValue.extend(lowPriceGradient)
+        retValue.append(averagePriceDelta)
+        # retValue.extend(diffBetweenDeltas)
+        # retValue.extend(highestPriceGradient)
+        # retValue.extend(lowPriceGradient)
         return retValue
 
 
@@ -414,6 +415,11 @@ def convertToTensors(tickerData, testRatio):
         # retValue[result] = (testData, trainData)
 
 
+
+    testDataCount = len(testData)
+    trainDataCount = len(trainData)
+    print("We're training with "+str(trainDataCount) +" data points")
+    print("We're testing with "+str(testDataCount) +" data points")
     optionCount = len(resultToData)
 
     model = keras.Sequential([
@@ -449,7 +455,7 @@ def runExec(tickerSymbols = None):
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 5
+    years = 1
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
