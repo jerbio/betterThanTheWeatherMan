@@ -3,6 +3,11 @@ import datetime
 import random
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from numpy import array, transpose
+
 import sys
 import os
 
@@ -223,9 +228,9 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                         highestDelta = int(abs(percentHigh))
                         isNegative = percentHigh < 0
 
-                # if highestDelta > 3:#ignore days with higher than 4% swings
-                #     ignoreDay = True
-                #     break
+                if highestDelta > 3:#ignore days with higher than 4% swings
+                    ignoreDay = True
+                    break
 
                 if percentOpen > 0 and percentOpen > maxPositive:
                     maxPositive = percentOpen
@@ -241,12 +246,13 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                 nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay])
             counter += 1
 
-        dayCountForFeatures = 90
+        dayCountForFeatures = 120
+        retroTrainingDays = 0
         if not ignoreDay:
             earliestPossibleDay = int(day) - dayCountForFeatures
             retryCount = 3
             foundEarliestDay = False
-            while retryCount > 0:
+            while retryCount > 0: #gets the earliest day before or equal to 'dayCountForFeatures' thats within tickerData
                 if earliestPossibleDay in tickerData:
                     foundEarliestDay = True
                     break
@@ -321,46 +327,55 @@ def getDayOutlook(tickerData, earliestDay = None, dayCount = 3):
                         dataForDay.append(tickerEntry['ticker'][2])
                         dataForDay.append(tickerEntry['ticker'][3])
                         dataForDay.append(tickerEntry['ticker'][4])
+                        # dataForDay.append(weekDay)
 
                         inflectionPointFeatures = getPreceedingDayFeatures(dayAsInt, tickerData)
                         if inflectionPointFeatures is not None:
                             dataForDay.extend(inflectionPointFeatures[0])
                             dataForDay.extend(inflectionPointFeatures[1])
                             precedingNintyDays.extend(dataForDay)
-                        # dataForDay.append(weekDay)
+                            retroTrainingDays +=1
                         featureLen = len(dataForDay)
                         if tickerFeaturesPerDay < featureLen:
-                            tickerFeaturesPerDay = featureLen
-                        
-                        
+                            tickerFeaturesPerDay = featureLen            
                     earliestPossibleDay +=1
-            dayLimit = dayCountForFeatures - 30
+            
+            desiredNumberOfRetroDaysForAnalysis = int(0.6667 * dayCountForFeatures) #We want to have at least two third of the count of the calendar days available ast stock days
+            if desiredNumberOfRetroDaysForAnalysis <= retroTrainingDays:
+                if tickerFeaturesPerDay > 0:
+                    dayLimit = desiredNumberOfRetroDaysForAnalysis * tickerFeaturesPerDay
+                    deltaLimit = 1
+                    if len(precedingNintyDays) > dayLimit:
+                        dayCount = len(precedingNintyDays)
+                        precedingNintyDays = precedingNintyDays[(dayCount - dayLimit):dayCount]
+                        maxDelta = 1 if maxPositive > deltaLimit else 0
+                        retValue[day] = {
+                            "maxDelta": maxDelta,
+                            "changes": nextDaySeriesChanges,
+                            "tickerData": nextDaySeriesIndexes,
+                            "precedingDays": precedingNintyDays,
+                            "featureLengthPerRetroDay": featureLen
+                        }
 
-            if tickerFeaturesPerDay > 0:
-                dayLimit = dayLimit * tickerFeaturesPerDay
-            deltaLimit = 1
-            if len(precedingNintyDays) > dayLimit:
-                dayCount = len(precedingNintyDays)
-                precedingNintyDays = precedingNintyDays[(dayCount - dayLimit):dayCount]
-                maxDelta = 1 if maxPositive > deltaLimit else 0
-                retValue[day] = {
-                    "maxDelta": maxDelta,
-                    "changes": nextDaySeriesChanges,
-                    "tickerData": nextDaySeriesIndexes,
-                    "precedingDays": precedingNintyDays
-                }
     return retValue
 
 
 def convertToTensors(tickerData, testRatio):
     resultToData = {}
     retValue = {}
-
+    featureLengthPerRetroDay = None
     for key in tickerData:
         dictOfPrecedingDaysTo = tickerData[key]
         for dayCount in dictOfPrecedingDaysTo:
             precedingDays = dictOfPrecedingDaysTo[dayCount]["precedingDays"]
             result = dictOfPrecedingDaysTo[dayCount]["maxDelta"]
+            currentFeatureLengthPerRetroDay = dictOfPrecedingDaysTo[dayCount]["featureLengthPerRetroDay"]
+            if featureLengthPerRetroDay is None:
+                featureLengthPerRetroDay = currentFeatureLengthPerRetroDay
+            
+            if featureLengthPerRetroDay != currentFeatureLengthPerRetroDay:
+                raise NameError('It reeks, It reeks')
+
             if result in resultToData:
                 resultToData[result].append(precedingDays)
             else:
@@ -412,40 +427,66 @@ def convertToTensors(tickerData, testRatio):
                 trainData.append(dataSeries)
                 trainResult.append(percentToIndex[result])
 
-        # retValue[result] = (testData, trainData)
-
-
 
     testDataCount = len(testData)
     trainDataCount = len(trainData)
+
+    for i in range(trainDataCount):
+        index = random.randint(0,trainDataCount - 1)
+        trainHolder = trainData[i]
+        resultHolder = trainResult[i]
+        
+        trainData[i] = trainData[index]
+        trainResult[i] = trainResult[index]
+        
+        trainData[index] = trainHolder
+        trainResult[index] = resultHolder
+
+
     print("We're training with "+str(trainDataCount) +" data points")
     print("We're testing with "+str(testDataCount) +" data points")
     optionCount = len(resultToData)
 
-    model = keras.Sequential([
-        # keras.layers.Flatten(input_shape=(28, 28)),
-        keras.layers.Dense(256, activation='relu'),
-        keras.layers.Dense(256, activation='relu'),
-        keras.layers.Dense(optionCount)
-    ])
-    numberOfEpochs = 100
+    combinedFeaturesPerDay = len(trainData[0])
+    numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
+    numberOfDaysAsInt = int(numberOfDays) # the number of retro days 
+    model = tf.keras.Sequential()
+
+    trainDataReshaped = array(trainData)
+    trainDataReshaped = trainDataReshaped.reshape(trainDataCount, numberOfDaysAsInt, featureLengthPerRetroDay)
+    trainDataReshaped = trainDataReshaped.tolist()
+
+    model.add(
+        layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2)
+            )
+    # model.add(layers.Flatten())
+    model.add(layers.Dense(optionCount))
+
+    trainResultReshaped = trainResult
+
+    
+    numberOfEpochs = 200
     learningRate = 0.001
     optimizer = tf.compat.v1.train.AdamOptimizer(
         learning_rate=learningRate, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False,
         name='Adam'
     )
-    # optimizer = tf.compat.v1.train.GradientDescentOptimizer(
-    #     learning_rate = learningRate, use_locking=False, name='GradientDescent'
-    # )
+
     model.compile(optimizer=optimizer,
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=['accuracy'])
+    
+    
+    print(model.summary())
+    model.fit(trainDataReshaped, trainResultReshaped, epochs=numberOfEpochs)
 
-    trainData_tf= tf.convert_to_tensor(trainData)
-    trainResult_tf= tf.convert_to_tensor(trainResult)
-    model.fit(trainData, trainResult, epochs=numberOfEpochs)
 
-    test_loss, test_acc = model.evaluate(testData,  testResult, verbose=2)
+    testDataReshaped = array(testData)
+    testDataReshaped = testDataReshaped.reshape(testDataCount, numberOfDaysAsInt, featureLengthPerRetroDay)
+    testDataReshaped = testDataReshaped.tolist()
+    testResultReshaped = testResult
+
+    test_loss, test_acc = model.evaluate(testDataReshaped,  testResultReshaped, verbose=2)
     print('\nTest accuracy:', test_acc)
 
 
