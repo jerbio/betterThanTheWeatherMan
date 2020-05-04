@@ -111,11 +111,11 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         avgPrice = (closePrice + openPrice)/2
         
         # DO NOT CHANGE THE APPEND ORDER 
-        tickerData.append(openPrice);
-        tickerData.append(lowestPrice);
-        tickerData.append(highstPrice);
-        tickerData.append(closePrice);
-        tickerData.append(avgPrice);
+        tickerData.append(openPrice);#0
+        tickerData.append(lowestPrice);#1
+        tickerData.append(highstPrice);#2
+        tickerData.append(closePrice);#3
+        tickerData.append(avgPrice);#4
         
     
     return retValue;

@@ -171,10 +171,12 @@ def getPreceedingDayFeatures(dayIndex, timeData):
     retValue = (lowestInflextionPointsFeatures, highestInflextionPointFeatures)
     return retValue
 
-def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3):
+def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForFeatures = 120, dayCount = 3):
     '''
-    function generates a 'dayCount' day data of the stock market it gets the percentage hikes of each day after a given day, excluding the current day
-    earliestDay holds the earliest day to which you don't want to pull ticker data
+    function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
+    X is provided with the arg 'dayCount'. These day points have to be within tickerData.
+    This function returns an object that contains the preceding Y days of features.
+    Y is provided by 'dayCountForFeatures'
     '''
     beginningOfTime_str = "1970-01-01 00:00:00"
     beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
@@ -209,10 +211,12 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
         activeDayCounter = 0
         isNegative = False
         highestDelta = 0
-        ignoreDay = False
+        ignoreDay = True
         maxPositive = 0
         maxNegative = 0
-        while counter < (dayCount+1) and len(nextDaySeriesIndexes)<4:
+        allRetroDayIndexes = set()
+        retryLimit = dayCount + 2
+        while counter < retryLimit and len(nextDaySeriesIndexes)<=dayCount:
             dayIndex = day+counter
             if dayIndex in tickerData and dayIndex != day :
                 activeDayCounter += 1
@@ -250,11 +254,11 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
                 if percentLow < maxNegative:
                     maxNegative = percentLow
 
-
+                ignoreDay = False
                 nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay, percentLow])
             counter += 1
 
-        dayCountForFeatures = 120
+        
         retroTrainingDays = 0
         if not ignoreDay:
             possibleRetroDay = int(day) - dayCountForFeatures
@@ -274,7 +278,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
                     if possibleRetroDay in tickerData:
                         featureDay = beginningOfTime + datetime.timedelta(days=(possibleRetroDay))
                         weekDay = featureDay.weekday()
-                        tickerEntry = tickerData[possibleRetroDay]
+                        retroDayTickerData = tickerData[possibleRetroDay]
                         dataForDay = []
                         fiveDayAvgPriceDelta = None
                         previousDayCountLimit = 4
@@ -283,6 +287,14 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
                         previousDayCountLoopLimit = previousDayCountLimit + 4
                         finalPreviousDayIndex = possibleRetroDay
                         tradingDayCount = 0
+                        allRetroDayIndexes.add(possibleRetroDay)
+
+                        retroDayOpeningPrice = retroDayTickerData['ticker'][0]
+                        retroDayClosingPrice = retroDayTickerData['ticker'][3]
+                        retroDayHighPrice = retroDayTickerData['ticker'][2]
+                        retroDayLowPrice = retroDayTickerData['ticker'][1]
+                        retroDayAvgPrice = retroDayTickerData['ticker'][4]
+                        
                         while previousDayCounter > 0 and previousDayCountLoopLimit > 0:
                             previousDayCount -=1
                             if previousDayCount in tickerData:
@@ -291,52 +303,74 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
                                 tradingDayCount += 1
                             previousDayCountLoopLimit -= 1
 
-                        avgPriceCategory = int((tickerEntry['ticker'][4])/10)
-                        openCloseDelta = tickerEntry['ticker'][3] - tickerEntry['ticker'][0]
-                        openLowDelta = tickerEntry['ticker'][1] - tickerEntry['ticker'][0]
-                        openHighDelta = tickerEntry['ticker'][2] - tickerEntry['ticker'][0]
-                        highLowDelta = tickerEntry['ticker'][2] - tickerEntry['ticker'][1]
-                        if previousDayCounter != previousDayCountLimit:
-                            previousDayTickerEntry = tickerData[finalPreviousDayIndex]
-                            fiveDayAvgPriceDelta = (tickerEntry['ticker'][4] - previousDayTickerEntry['ticker'][4])
+                        avgPriceCategory = int((retroDayAvgPrice)/10)
+                        dataForDay.append(avgPriceCategory)
 
 
-                        percentOpenCloseDelta = (openCloseDelta / tickerEntry['ticker'][0]) *100
-                        percentHighDelta = (openHighDelta / tickerEntry['ticker'][0]) * 100
-                        percentOpenLowDelta = (openLowDelta / tickerEntry['ticker'][0])*100
-                        percentHighLowDelta = (highLowDelta / tickerEntry['ticker'][0])*100
+                        openPricePredictionDayDelta = retroDayOpeningPrice - closePrice
+                        closePricePredictionDayDelta = retroDayClosingPrice - closePrice
+                        highPricePredictionDayDelta = retroDayHighPrice - closePrice
+                        lowPricePredictionDayDelta = retroDayLowPrice - closePrice
+                        avgPricePredictionDayDelta = retroDayAvgPrice - closePrice
 
-                        percentCloseDelta = (openHighDelta / tickerEntry['ticker'][3])* 100
-                        percentCloseLowDelta = (openLowDelta / tickerEntry['ticker'][3]) * 100
-                        percentCloseHighDelta = (highLowDelta / tickerEntry['ticker'][3]) * 100
+                        openPricePredictionDayDeltaPercent = (openPricePredictionDayDelta/closePrice) * 100
+                        closePricePredictionDayDeltaPercent = (closePricePredictionDayDelta/closePrice) * 100
+                        highPricePredictionDayDeltaPercent = (highPricePredictionDayDelta/closePrice) * 100
+                        lowPricePredictionDayDeltaPercent = (lowPricePredictionDayDelta/closePrice) * 100
+                        avgPricePredictionDayDeltaPercent = (avgPricePredictionDayDelta/closePrice) * 100
+                        
+                        dataForDay.append(openPricePredictionDayDeltaPercent)
+                        dataForDay.append(closePricePredictionDayDeltaPercent)
+                        dataForDay.append(highPricePredictionDayDeltaPercent)
+                        dataForDay.append(lowPricePredictionDayDeltaPercent)
+                        dataForDay.append(avgPricePredictionDayDeltaPercent)
+                        
+
+
+                        openLowDelta = retroDayLowPrice - retroDayOpeningPrice
+                        openHighDelta = retroDayHighPrice - retroDayOpeningPrice
+                        highLowDelta = retroDayHighPrice - retroDayLowPrice
+
+                        percentHighDelta = (openHighDelta / retroDayOpeningPrice) * 100
+                        percentOpenLowDelta = (openLowDelta / retroDayOpeningPrice)*100
+                        percentHighLowDelta = (highLowDelta / retroDayOpeningPrice)*100
+
+                        percentCloseDelta = (openHighDelta / retroDayClosingPrice)* 100
+                        percentCloseLowDelta = (openLowDelta / retroDayClosingPrice) * 100
+                        percentCloseHighDelta = (highLowDelta / retroDayClosingPrice) * 100
                         dataForDay.append(percentCloseDelta)
                         dataForDay.append(percentCloseLowDelta)
                         dataForDay.append(percentCloseHighDelta)
-
-                        dataForDay.append(percentOpenCloseDelta)
                         dataForDay.append(percentHighDelta)
                         dataForDay.append(percentOpenLowDelta)
                         dataForDay.append(percentHighLowDelta)
-                        dataForDay.append(avgPriceCategory)
+                        
+                        
 
+                        openCloseDelta = retroDayClosingPrice - retroDayOpeningPrice
+                        if previousDayCounter != previousDayCountLimit:
+                            previousDayTickerEntry = tickerData[finalPreviousDayIndex]
+                            fiveDayAvgPriceDelta = (retroDayAvgPrice - previousDayTickerEntry['ticker'][4])
+                        percentOpenCloseDelta = (openCloseDelta / retroDayOpeningPrice) *100
+                        dataForDay.append(percentOpenCloseDelta)
                         tradingDayDelta = 0
                         percentageTradingDayDelta = 0
                         if fiveDayAvgPriceDelta is None:
                             percentFiveDayDelta = percentOpenCloseDelta
                         else:
-                            percentFiveDayDelta = (fiveDayAvgPriceDelta/tickerEntry['ticker'][0])
+                            percentFiveDayDelta = (fiveDayAvgPriceDelta/retroDayOpeningPrice)
                             tradingDayDelta = fiveDayAvgPriceDelta/tradingDayCount
-                            percentageTradingDayDelta = ((fiveDayAvgPriceDelta/tickerEntry['ticker'][0]) * 100)/tradingDayCount
+                            percentageTradingDayDelta = ((fiveDayAvgPriceDelta/retroDayOpeningPrice) * 100)/tradingDayCount
                         
                         dataForDay.append(percentFiveDayDelta)
                         dataForDay.append(tradingDayDelta)
                         dataForDay.append(percentageTradingDayDelta)
 
-                        dataForDay.append(tickerEntry['ticker'][0])
-                        dataForDay.append(tickerEntry['ticker'][1])
-                        dataForDay.append(tickerEntry['ticker'][2])
-                        dataForDay.append(tickerEntry['ticker'][3])
-                        dataForDay.append(tickerEntry['ticker'][4])
+                        dataForDay.append(retroDayOpeningPrice)
+                        dataForDay.append(retroDayLowPrice)
+                        dataForDay.append(retroDayHighPrice)
+                        dataForDay.append(retroDayClosingPrice)
+                        dataForDay.append(retroDayAvgPrice)
                         # dataForDay.append(weekDay)
 
                         inflectionPointFeatures = getPreceedingDayFeatures(dayOfPrediction, tickerData)
@@ -356,13 +390,14 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCount = 3
                     dayLimit = desiredNumberOfRetroDaysForAnalysis * tickerFeaturesPerDay
                     deltaLimit = 1
                     if len(precedingNintyDays) > dayLimit:
-                        dayCount = len(precedingNintyDays)
-                        precedingNintyDays = precedingNintyDays[(dayCount - dayLimit):dayCount]
+                        precedingNintyDayCount = len(precedingNintyDays)
+                        precedingNintyDays = precedingNintyDays[(precedingNintyDayCount - dayLimit):precedingNintyDayCount]
                         maxDelta = 1 if maxPositive > deltaLimit else 0
                         retValue[day] = {
                             "day": day,
                             "maxDelta": maxDelta,
-                            "changes": nextDaySeriesChanges,
+                            "retroDays": allRetroDayIndexes,
+                            # "changes": nextDaySeriesChanges,
                             "tickerData": nextDaySeriesIndexes,
                             "precedingDays": precedingNintyDays,
                             "featureLengthPerRetroDay": featureLen
@@ -378,11 +413,11 @@ def convertToTensors(tickerData, testRatio):
     symbolKeys = list(tickerData.keys())
     random.shuffle(symbolKeys)
     for symbolKey in symbolKeys:
-        dictOfPrecedingDaysTo = tickerData[symbolKey]
-        for dayCount in dictOfPrecedingDaysTo:
-            precedingDays = dictOfPrecedingDaysTo[dayCount]["precedingDays"]
-            result = dictOfPrecedingDaysTo[dayCount]["maxDelta"]
-            currentFeatureLengthPerRetroDay = dictOfPrecedingDaysTo[dayCount]["featureLengthPerRetroDay"]
+        dictOfDaysToPreceedingData = tickerData[symbolKey]
+        for dayCount in dictOfDaysToPreceedingData:
+            precedingDays = dictOfDaysToPreceedingData[dayCount]["precedingDays"]
+            result = dictOfDaysToPreceedingData[dayCount]["maxDelta"]
+            currentFeatureLengthPerRetroDay = dictOfDaysToPreceedingData[dayCount]["featureLengthPerRetroDay"]
             if featureLengthPerRetroDay is None:
                 featureLengthPerRetroDay = currentFeatureLengthPerRetroDay
             
@@ -540,11 +575,11 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     ###### Model creation 
     model = tf.keras.Sequential()
     model.add(layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
-    model.add(layers.Dropout(0.40))
+    model.add(layers.Dropout(0.1))
     model.add(layers.Dense(256, activation='relu'),)
     model.add(layers.Dense(optionCount, activation='softmax'))
 
-    numberOfEpochs = 1000
+    numberOfEpochs = 200
     learningRate = 0.001
     optimizer = tf.compat.v1.train.AdamOptimizer(
         learning_rate=learningRate, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False,
@@ -630,7 +665,7 @@ def runExec(tickerSymbols = None):
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 1
+    years = 0.5
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
@@ -650,7 +685,7 @@ def runExec(tickerSymbols = None):
                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
 
     if len(symbolToDayData) > 0:
-        dataFormated = convertToTensors(symbolToDayData, 0.3)
+        dataFormated = convertToTensors(symbolToDayData, 0.8)
         trainResult = dataFormated['trainY']
         trainData = dataFormated['trainX']
         testResult = dataFormated['testY']
@@ -661,7 +696,7 @@ def runExec(tickerSymbols = None):
             validationResult  = dataFormated['schewData']['key']
             validation = (validationData, validationResult)
         featureLengthPerRetroDay = dataFormated['featureLengthPerRetroDay']
-        buildModelAndPredictModel(trainData,trainResult,testData, testResult, featureLengthPerRetroDay, validation )
+        buildModelAndPredictModel(trainData,trainResult,testData, testResult, featureLengthPerRetroDay, validation)
 
     else:
         print("Could not find data to process")
