@@ -171,7 +171,7 @@ def getPreceedingDayFeatures(dayIndex, timeData):
     retValue = (lowestInflextionPointsFeatures, highestInflextionPointFeatures)
     return retValue
 
-def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForFeatures = 120, dayCount = 3):
+def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForFeatures = 120, dayCount = 4, symbolIndex = 0):
     '''
     function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
     X is provided with the arg 'dayCount'. These day points have to be within tickerData.
@@ -184,6 +184,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
 
     }
     global tickerFeaturesPerDay
+    trainingDays = set()
     earliestDayInt = 0
     latestDayInt = 0
     if earliestDay:
@@ -279,7 +280,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
                         featureDay = beginningOfTime + datetime.timedelta(days=(possibleRetroDay))
                         weekDay = featureDay.weekday()
                         retroDayTickerData = tickerData[possibleRetroDay]
-                        dataForDay = []
+                        dataForDay = [] #[symbolCounter, possibleRetroDay]
                         fiveDayAvgPriceDelta = None
                         previousDayCountLimit = 4
                         previousDayCounter = previousDayCountLimit
@@ -393,14 +394,17 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
                         precedingNintyDayCount = len(precedingNintyDays)
                         precedingNintyDays = precedingNintyDays[(precedingNintyDayCount - dayLimit):precedingNintyDayCount]
                         maxDelta = 1 if maxPositive > deltaLimit else 0
+                        trainingDays.add(day)
                         retValue[day] = {
                             "day": day,
                             "maxDelta": maxDelta,
                             "retroDays": allRetroDayIndexes,
-                            # "changes": nextDaySeriesChanges,
+                            "trainingDays": trainingDays,
+                            "nextDaySeriesChanges": nextDaySeriesChanges,
                             "tickerData": nextDaySeriesIndexes,
                             "precedingDays": precedingNintyDays,
-                            "featureLengthPerRetroDay": featureLen
+                            "featureLengthPerRetroDay": featureLen,
+                            "symbolIndex": symbolIndex
                         }
 
     return retValue
@@ -410,14 +414,26 @@ def convertToTensors(tickerData, testRatio):
     resultToData = {}
     retValue = {}
     featureLengthPerRetroDay = None
+    ignoreFeatureCount = None
     symbolKeys = list(tickerData.keys())
     random.shuffle(symbolKeys)
     for symbolKey in symbolKeys:
         dictOfDaysToPreceedingData = tickerData[symbolKey]
-        for dayCount in dictOfDaysToPreceedingData:
-            precedingDays = dictOfDaysToPreceedingData[dayCount]["precedingDays"]
-            result = dictOfDaysToPreceedingData[dayCount]["maxDelta"]
-            currentFeatureLengthPerRetroDay = dictOfDaysToPreceedingData[dayCount]["featureLengthPerRetroDay"]
+        for targetPredictionDayIndex in dictOfDaysToPreceedingData:
+            precedingDays = dictOfDaysToPreceedingData[targetPredictionDayIndex]["precedingDays"]
+            symbolIndex = dictOfDaysToPreceedingData[targetPredictionDayIndex]["symbolIndex"]
+            # dayDeltas = dictOfDaysToPreceedingData[targetPredictionDayIndex]["featureLengthPerRetroDay"]
+            nextDaySeriesChanges= dictOfDaysToPreceedingData[targetPredictionDayIndex]["nextDaySeriesChanges"]
+            result = dictOfDaysToPreceedingData[targetPredictionDayIndex]["maxDelta"]
+            symbolAndDayData = {
+                'targetPredictionDayIndex' : targetPredictionDayIndex, 
+                'symbolIndex': symbolIndex,
+                'nextDaySeriesChanges': nextDaySeriesChanges,
+                "maxDelta": result
+            }
+            precedingDays.append(symbolAndDayData)  # appending so can be removed in function reshapeData. To be used for assessing qualit of prediction
+            ignoreFeatureCount = 1
+            currentFeatureLengthPerRetroDay = dictOfDaysToPreceedingData[targetPredictionDayIndex]["featureLengthPerRetroDay"]
             if featureLengthPerRetroDay is None:
                 featureLengthPerRetroDay = currentFeatureLengthPerRetroDay
             
@@ -451,7 +467,7 @@ def convertToTensors(tickerData, testRatio):
             restOfSchewedCollection = resultToData[key][minCount:]
             schewedKey = key
         resultToData[key] = resultToData[key][:minCount]
-    ##### End of section removing schewed data
+    ### End of section removing schewed data
     percentageDiff = []
     for key in resultToData.keys():
         percentageDiff.append(key)
@@ -481,10 +497,10 @@ def convertToTensors(tickerData, testRatio):
             if testCount > 0:
                 testCount -=1
                 testData.append(dataSeries)
-                testResult.append(percentToIndex[result])
+                testResult.append(result)
             else:
                 trainData.append(dataSeries)
-                trainResult.append(percentToIndex[result])
+                trainResult.append(result)
 
 
     testDataCount = len(testData)
@@ -525,6 +541,7 @@ def convertToTensors(tickerData, testRatio):
         'testY': testResult,
         'testX': testData,
         'featureLengthPerRetroDay': featureLengthPerRetroDay,
+        'ignoreFeatureCount': ignoreFeatureCount,
         'schewData': None
     }
 
@@ -533,24 +550,28 @@ def convertToTensors(tickerData, testRatio):
     return retValue
 
 
-def reshapeData(xs, ys, featureLengthPerRetroDay):
-    combinedFeaturesPerDay = len(xs[0])
+def reshapeData(xs, ys, featureLengthPerRetroDay, featureIgnoreCount = 0):
+    tupleReformatedXs = [(paramFeatures[:len(paramFeatures) - featureIgnoreCount], paramFeatures[len(paramFeatures) - featureIgnoreCount:]) for paramFeatures in xs]
+    reformatedXs = [onlyFeaturesAndSymbols[0] for onlyFeaturesAndSymbols in tupleReformatedXs]
+    symbolAndFeatures = [onlyFeaturesAndSymbols[1] for onlyFeaturesAndSymbols in tupleReformatedXs]
+    combinedFeaturesPerDay = len(reformatedXs[0])
     numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
     numberOfDaysAsInt = int(numberOfDays) # the number of retro days 
 
-    dataCount = len(xs)
-    reshapedX = array(xs)
+    dataCount = len(reformatedXs)
+    reshapedX = array(reformatedXs)
     reshapedX = reshapedX.reshape(dataCount, numberOfDaysAsInt, featureLengthPerRetroDay)
     reshapedX = reshapedX.tolist()
     return {
         'x': reshapedX,
-        'y': ys
+        'y': ys,
+        'symbolAndFeatures': symbolAndFeatures
     }
 
 
-def buildModelAndPredictModel(trainData, trainResult, testData, testResult, featureLengthPerRetroDay, schewedData = None, model = None):
+def buildModelAndPredictModel(trainData, trainResult, testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount = 0, schewedData = None, symbolToIndex = None):
     
-    combinedFeaturesPerDay = len(trainData[0])
+    combinedFeaturesPerDay = len(trainData[0]) - ignoreFeatureCount
     numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
     numberOfDaysAsInt = int(numberOfDays) # the number of retro days 
 
@@ -560,7 +581,7 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     print("We're training with "+str(trainDataCount) +" data points")
     print("We're testing with "+str(testDataCount) +" data points")
 
-    reshaped = reshapeData(trainData, trainResult, featureLengthPerRetroDay)
+    reshaped = reshapeData(trainData, trainResult, featureLengthPerRetroDay, ignoreFeatureCount)
     trainDataReshaped = reshaped['x']
     trainResultReshaped = reshaped['y']
     optionCount = 2
@@ -569,13 +590,13 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     if schewedData is not None:
         extraFeaturesData = schewedData[0]
         extraResults = schewedData[1]
-        reshapedResults = reshapeData(extraFeaturesData, extraResults, featureLengthPerRetroDay)
+        reshapedResults = reshapeData(extraFeaturesData, extraResults, featureLengthPerRetroDay, ignoreFeatureCount)
         validationData = (reshapedResults['x'], reshapedResults['y'])
 
     ###### Model creation 
     model = tf.keras.Sequential()
     model.add(layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
-    model.add(layers.Dropout(0.1))
+    model.add(layers.Dropout(0.3))
     model.add(layers.Dense(256, activation='relu'),)
     model.add(layers.Dense(optionCount, activation='softmax'))
 
@@ -598,7 +619,7 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
         validation_data= validationData,
         epochs=numberOfEpochs)
 
-    reshaped = reshapeData(testData, testResult, featureLengthPerRetroDay)
+    reshaped = reshapeData(testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount)
     testDataReshaped = reshaped['x']
     testResultReshaped = reshaped['y']
     test_loss, test_acc = model.evaluate(testDataReshaped,  testResultReshaped, verbose=2)
@@ -609,10 +630,10 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
 
     prediction = model.predict_classes(testDataReshaped, verbose=2)
     predictionArr = prediction.tolist()
-    oneErrorRate(predictionArr, testResultReshaped, prediction_probabilities)
+    oneErrorRate(predictionArr, testResultReshaped, testData, prediction_probabilities, symbolToIndex)
 
 
-def oneErrorRate (prediction, result, prediction_probabilities = None):
+def oneErrorRate (prediction, result, testData, prediction_probabilities = None, symbolToIndex = None):
     countLimit = len(prediction)
     index = 0
     onePredictionCount = 0
@@ -623,6 +644,8 @@ def oneErrorRate (prediction, result, prediction_probabilities = None):
     onlyOneCounts = []
     while index < countLimit:
         resultValue = result[index]
+        tesDatum = testData[index]
+        metadata = tesDatum[len(tesDatum) - 1]
         predictionValue = prediction[index]
         probs = None
         predictionAndIndex = None
@@ -630,6 +653,14 @@ def oneErrorRate (prediction, result, prediction_probabilities = None):
         if prediction_probabilities is not None:
             probs = prediction_probabilities[index]
             predictionAndIndex = list(probs)
+            # predictionAndIndex.append(metadata)
+            symbolIndex = metadata["symbolIndex"]
+            if symbolToIndex is not None:
+                stockSymbol = symbolToIndex[symbolIndex]
+                dayIndex = metadata['targetPredictionDayIndex']
+                dayAsTime = timeFromDayIndex(dayIndex)
+                predictionAndIndex.append(stockSymbol)
+                predictionAndIndex.append(str(dayAsTime))
             combinePredictions.append(predictionAndIndex)
             
 
@@ -660,43 +691,99 @@ def oneErrorRate (prediction, result, prediction_probabilities = None):
     # print("\n\n\n\nCorrect prediction probablities \n" + str(SuccessfullPredictions))
 
 
+def timeFromDayIndex(dayIndex):
+    beginningOfTime_str = "1970-01-01 00:00:00"
+    beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
+    retValue = beginningOfTime + datetime.timedelta(days=(dayIndex))
+
+    return retValue
+
+
+def daysToDictionary(dayIndexes, mappings):
+    retValue = {}
+    for dayIndex in dayIndexes:
+        retValue[dayIndex] = mappings[dayIndex]
+    return retValue
+
 def runExec(tickerSymbols = None):
     defaultSymbol = "MMM"
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 0.5
+    years = 0.25
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
+    finalTime = currentTime + datetime.timedelta(days=(-2))
     if not tickerSymbols:
         tickerSymbols = [defaultSymbol]
-
+    dataIndexToCounter = {}
     symbolToDayData = {}
+    symbolCounter = 0
     for symbol in tickerSymbols:
         if symbol not in symbolToDayData:
             tickerData = load_time_series_daily(symbol)
             print("symbol is "+ str(symbol))
             stockDataDayCount = len(tickerData)
             if stockDataDayCount > totalDays:
-                outlookResult = getDayOutlook(tickerData, earliestTime)
+                outlookResult = getDayOutlook(tickerData, earliestTime, finalTime, symbolIndex = symbolCounter)
                 symbolToDayData[symbol] = outlookResult
+                dataIndexToCounter[symbolCounter] = symbol
+                symbolCounter += 1
             else:
                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
 
     if len(symbolToDayData) > 0:
-        dataFormated = convertToTensors(symbolToDayData, 0.8)
-        trainResult = dataFormated['trainY']
-        trainData = dataFormated['trainX']
-        testResult = dataFormated['testY']
-        testData  = dataFormated['testX']
+        trainResult = []
+        trainData = []
+        testResult = []
+        testData = []
         validation = None
-        if dataFormated['schewData']:
-            validationData  = dataFormated['schewData']['data']
-            validationResult  = dataFormated['schewData']['key']
-            validation = (validationData, validationResult)
-        featureLengthPerRetroDay = dataFormated['featureLengthPerRetroDay']
-        buildModelAndPredictModel(trainData,trainResult,testData, testResult, featureLengthPerRetroDay, validation)
+        ignoreFeatureCount = 0
+
+
+        futureDayCount = 1
+        symbolFeatureLengthPerRetroDay = -3
+        symbolKeys = symbolToDayData.keys()
+
+        print("using the time frame "+str(earliestTime)+ " - "+str(finalTime))
+        print("Predicting "+str(futureDayCount)+ " days into the future")
+
+        for key in symbolKeys:
+            trainingDays = None
+            for value in symbolToDayData[key].values():
+                trainingDays = value["trainingDays"]
+                break
+        
+            if trainingDays is not None:
+                orderedTraingDays = sorted(trainingDays)
+                trainDataDays = orderedTraingDays[:len(orderedTraingDays) - futureDayCount]
+                testDataDays = orderedTraingDays[(len(orderedTraingDays) - futureDayCount):]
+                testSymbolToDayData = {
+                    ""+key+"": daysToDictionary(testDataDays, symbolToDayData[key])
+                }
+
+                trainSymbolToDayData = {
+                    ""+key+"": daysToDictionary(trainDataDays, symbolToDayData[key])
+                }
+                dataFormated = convertToTensors(trainSymbolToDayData, 0)
+                trainResult.extend( dataFormated['trainY'])
+                trainData.extend(dataFormated['trainX'])
+                testResult.extend(dataFormated['testY'])
+                testData.extend(dataFormated['testX'])
+
+                dataFormated = convertToTensors(testSymbolToDayData, 1)
+                trainResult.extend( dataFormated['trainY'])
+                trainData.extend(dataFormated['trainX'])
+                testResult.extend(dataFormated['testY'])
+                testData.extend(dataFormated['testX'])
+                etFeatureDayLength = dataFormated['featureLengthPerRetroDay']
+                ignoreFeatureCount = dataFormated['ignoreFeatureCount']
+                symbolFeatureLengthPerRetroDay = etFeatureDayLength
+                
+
+        
+        buildModelAndPredictModel(trainData,trainResult,testData, testResult, symbolFeatureLengthPerRetroDay, ignoreFeatureCount, (testData, testResult), dataIndexToCounter)
 
     else:
         print("Could not find data to process")
