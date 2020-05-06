@@ -204,6 +204,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
         dayOfPrediction = int(day)
         openPrice = tickerData[day]["ticker"][0]
         highPrice = tickerData[day]["ticker"][2]
+        lowPrice = tickerData[day]["ticker"][1]
         closePrice = tickerData[day]["ticker"][3]
         nextDaySeriesIndexes = []
         nextDaySeriesChanges = []
@@ -233,6 +234,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
                 percentOpen = (deltaOpen/closePrice) * 100
                 percentHigh = (deltaHigh/closePrice) * 100
                 percentLow = (deltaClose/closePrice) * 100
+
                 dayDiff = counter
                 outlookDay = currentDay + datetime.timedelta(days=(dayDiff))
                 weekDay = outlookDay.weekday()
@@ -304,6 +306,13 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
                                 tradingDayCount += 1
                             previousDayCountLoopLimit -= 1
 
+                        predictionDayHighDeltaPercent = ((highPrice - closePrice) / closePrice) * 100
+                        predictionDayOpenDeltaPercent = ((openPrice - closePrice) / closePrice) * 100
+                        predictionDayLowDeltaPercent = ((lowPrice - closePrice) / closePrice) * 100
+                        dataForDay.append(predictionDayHighDeltaPercent)
+                        # dataForDay.append(predictionDayOpenDeltaPercent)
+                        dataForDay.append(predictionDayLowDeltaPercent)
+                        
                         avgPriceCategory = int((retroDayAvgPrice)/10)
                         dataForDay.append(avgPriceCategory)
 
@@ -397,6 +406,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
                         trainingDays.add(day)
                         retValue[day] = {
                             "day": day,
+                            "percentageLimit": str(deltaLimit) + "%",
                             "maxDelta": maxDelta,
                             "retroDays": allRetroDayIndexes,
                             "trainingDays": trainingDays,
@@ -425,11 +435,13 @@ def convertToTensors(tickerData, testRatio):
             # dayDeltas = dictOfDaysToPreceedingData[targetPredictionDayIndex]["featureLengthPerRetroDay"]
             nextDaySeriesChanges= dictOfDaysToPreceedingData[targetPredictionDayIndex]["nextDaySeriesChanges"]
             result = dictOfDaysToPreceedingData[targetPredictionDayIndex]["maxDelta"]
+            percentageLimit = dictOfDaysToPreceedingData[targetPredictionDayIndex]["percentageLimit"]
             symbolAndDayData = {
                 'targetPredictionDayIndex' : targetPredictionDayIndex, 
                 'symbolIndex': symbolIndex,
                 'nextDaySeriesChanges': nextDaySeriesChanges,
-                "maxDelta": result
+                "maxDelta": result,
+                "percentageLimit": percentageLimit
             }
             precedingDays.append(symbolAndDayData)  # appending so can be removed in function reshapeData. To be used for assessing qualit of prediction
             ignoreFeatureCount = 1
@@ -584,6 +596,8 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     reshaped = reshapeData(trainData, trainResult, featureLengthPerRetroDay, ignoreFeatureCount)
     trainDataReshaped = reshaped['x']
     trainResultReshaped = reshaped['y']
+    metaData = reshaped['symbolAndFeatures']
+    print(' metaData is '+ str(metaData[0]))
     optionCount = 2
 
     validationData = None
@@ -596,7 +610,7 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     ###### Model creation 
     model = tf.keras.Sequential()
     model.add(layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
-    model.add(layers.Dropout(0.3))
+    model.add(layers.Dropout(0.35))
     model.add(layers.Dense(256, activation='relu'),)
     model.add(layers.Dense(optionCount, activation='softmax'))
 
@@ -660,6 +674,7 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
                 dayIndex = metadata['targetPredictionDayIndex']
                 dayAsTime = timeFromDayIndex(dayIndex)
                 predictionAndIndex.append(stockSymbol)
+                predictionAndIndex.append(dayIndex)
                 predictionAndIndex.append(str(dayAsTime))
             combinePredictions.append(predictionAndIndex)
             
@@ -681,7 +696,7 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
     if onePredictionCount > correctOneCountPrediction:
         print ("Correct one prediction ratio "+ str( ((correctOneCountPrediction )/onePredictionCount) * 100) + "%")
     
-    sortedOnlyOneCounts = sorted(onlyOneCounts, key=lambda Probabs: Probabs[0])
+    sortedOnlyOneCounts = sorted(onlyOneCounts, key=lambda Probabs: (Probabs[3], Probabs[0]))
     
     # print("correct prediction count " + str(correctOneCountPrediction))
     # print("one prediction count " + str(onePredictionCount))
@@ -710,11 +725,11 @@ def runExec(tickerSymbols = None):
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 0.25
+    years = 1
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
-    finalTime = currentTime + datetime.timedelta(days=(-2))
+    finalTime = earliestTime + datetime.timedelta(days=(60))
     if not tickerSymbols:
         tickerSymbols = [defaultSymbol]
     dataIndexToCounter = {}
@@ -742,7 +757,7 @@ def runExec(tickerSymbols = None):
         ignoreFeatureCount = 0
 
 
-        futureDayCount = 1
+        futureDayCount = 14
         symbolFeatureLengthPerRetroDay = -3
         symbolKeys = symbolToDayData.keys()
 
