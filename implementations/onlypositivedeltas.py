@@ -6,6 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense
+from .multiDayEvaluation import WeatherManPredictionTestConfig 
 import matplotlib.pyplot as plt
 from numpy import array, transpose
 
@@ -29,7 +30,6 @@ from libfiles.loaddataseries import load_time_series_daily
 # This works by looking forward into a given number of days from a given day.
 # It generates a collecion of all the deltass of the future days high from the a given days opening price
 # Any day with delta higher than 'deltaLimit' will be set to some max value
-tickerFeaturesPerDay = -1
 def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
     retValue = []
     cons_loop_counter = 7 # seven because a stock might not have data for a week
@@ -183,7 +183,7 @@ def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForF
     retValue = {
 
     }
-    global tickerFeaturesPerDay
+    tickerFeaturesPerDay = -1
     trainingDays = set()
     earliestDayInt = 0
     latestDayInt = 0
@@ -581,7 +581,7 @@ def reshapeData(xs, ys, featureLengthPerRetroDay, featureIgnoreCount = 0):
     }
 
 
-def buildModelAndPredictModel(trainData, trainResult, testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount = 0, schewedData = None, symbolToIndex = None):
+def buildPredictionModel(trainData, trainResult, testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount = 0, schewedData = None, symbolToIndex = None):
     
     combinedFeaturesPerDay = len(trainData[0]) - ignoreFeatureCount
     numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
@@ -645,9 +645,88 @@ def buildModelAndPredictModel(trainData, trainResult, testData, testResult, feat
     prediction = model.predict_classes(testDataReshaped, verbose=2)
     predictionArr = prediction.tolist()
     oneErrorRate(predictionArr, testResultReshaped, testData, prediction_probabilities, symbolToIndex)
+    return model
+
+def pickStockFromProbabilities(predictionProbability, numberOfStockForProbability = 5, stockPerDay = 1, probabilityRetryCount = 1000):
+    orderedByBestProbability = sorted(predictionProbability, key=lambda Probabs: (Probabs["wrongProbability"]))
+    bestFiveStocks = orderedByBestProbability[:numberOfStockForProbability]
+    retValue = []
+    if len(bestFiveStocks) > 0:
+        poulatedByRandomness = []
+        listGenCounter = 0
+        while listGenCounter < len(bestFiveStocks):
+            poulatedByRandomness.append({
+                "counter": 0,
+                "index": listGenCounter
+            })
+            listGenCounter+=1
+
+        indexLimit = len(bestFiveStocks) - 1
+        allIndexesToCount = []
+        retryCounter = 0
+        while retryCounter < probabilityRetryCount:
+            ranDomIndex = random.randint(0, indexLimit)
+            poulatedByRandomness[ranDomIndex]["counter"] += 1
+            retryCounter +=1
+
+        sortedRandomIndex = sorted(poulatedByRandomness, key=lambda entry: entry["counter"], reverse=True)
+        selectedRandomIndexes = sortedRandomIndex[:stockPerDay]
+        retValue = [bestFiveStocks[stockIndex['index']] for stockIndex in selectedRandomIndexes]
+
+    else:
+        retValue.append(bestFiveStocks[0])
+    
+    return retValue
 
 
-def oneErrorRate (prediction, result, testData, prediction_probabilities = None, symbolToIndex = None):
+
+
+    
+
+
+
+def assessPredictions(model, testData, testResults, featureLengthPerRetroDay, ignoreFeatureCount, indexToSymbol, stockPerDay = 1):
+    reshaped = reshapeData(testData, testResults, featureLengthPerRetroDay, ignoreFeatureCount)
+    testDataReshaped = reshaped['x']
+    testResultReshaped = reshaped['y']
+
+    prediction = model.predict(testDataReshaped, verbose=2)
+    prediction_probabilities = list(prediction)
+
+    prediction = model.predict_classes(testDataReshaped, verbose=2)
+    predictionArr = prediction.tolist()
+
+    predictionProcessed = processPredictions(predictionArr, prediction_probabilities, testData, testResults, indexToSymbol)
+    
+
+    totalCorrectlyPredicted = 0
+    totalOnesPredicted = 0
+
+
+    if 1 in predictionProcessed:
+        marketUpPredictions = predictionProcessed[1]
+        for predictionDayIndex in marketUpPredictions:
+            totalOnesPredicted += 1
+            predictionDayStockPredictions = marketUpPredictions[predictionDayIndex]
+            # for predictionDayIndex in predictionDayStockPredictions:
+            # allStockPredictions = predictionDayStockPredictions[predictionDayIndex]
+            selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions)
+            for selctedStock in selectedStocks:
+                if selctedStock["result"] == 1:
+                    totalCorrectlyPredicted += 1
+    
+    retValue = {
+        'correctPredictions': totalCorrectlyPredicted,
+        'totalOnesPredicted': totalOnesPredicted
+    }
+
+    return retValue
+
+
+    
+
+
+def oneErrorRate (prediction, result, testData, prediction_probabilities = None, indexToSymbol = None, printResult = False):
     countLimit = len(prediction)
     index = 0
     onePredictionCount = 0
@@ -656,6 +735,7 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
     FailedPredictions = []
     combinePredictions = []
     onlyOneCounts = []
+    
     while index < countLimit:
         resultValue = result[index]
         tesDatum = testData[index]
@@ -669,8 +749,9 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
             predictionAndIndex = list(probs)
             # predictionAndIndex.append(metadata)
             symbolIndex = metadata["symbolIndex"]
-            if symbolToIndex is not None:
-                stockSymbol = symbolToIndex[symbolIndex]
+            stockSymbol = indexToSymbol[symbolIndex]
+            if indexToSymbol is not None:
+                stockSymbol = indexToSymbol[symbolIndex]
                 dayIndex = metadata['targetPredictionDayIndex']
                 dayAsTime = timeFromDayIndex(dayIndex)
                 predictionAndIndex.append(stockSymbol)
@@ -697,13 +778,9 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
         print ("Correct one prediction ratio "+ str( ((correctOneCountPrediction )/onePredictionCount) * 100) + "%")
     
     sortedOnlyOneCounts = sorted(onlyOneCounts, key=lambda Probabs: (Probabs[3], Probabs[0]))
-    
-    # print("correct prediction count " + str(correctOneCountPrediction))
-    # print("one prediction count " + str(onePredictionCount))
-    # print("CombinedPredictions count " + str(onlyOneCounts))
-    print("Sorted CombinedPredictions count " + str(sortedOnlyOneCounts))
-    # print("\n\n\n\nWrong prediction probablities \n" + str(FailedPredictions))
-    # print("\n\n\n\nCorrect prediction probablities \n" + str(SuccessfullPredictions))
+
+    if printResult:
+        print("Sorted CombinedPredictions count " + str(sortedOnlyOneCounts))
 
 
 def timeFromDayIndex(dayIndex):
@@ -713,6 +790,75 @@ def timeFromDayIndex(dayIndex):
 
     return retValue
 
+def processPredictions(predictions, predictionProbabilities, testData, testResults, indexToSymbol):
+    OnePredicitons = {} # this holds a dayIndex -> ([topFiveProbabilityStockData], set(winningStocks))
+    ZeroPredicitons = {}
+    if (predictions is not None and predictionProbabilities is not None
+        and testData is not None and testResults is not None
+        and len(testResults) == len(predictionProbabilities) == len(predictions)):
+        index = 0
+        countLimit = len(predictions)
+        while index < countLimit:
+            tesDatum = testData[index]
+            metadata = tesDatum[len(tesDatum) - 1]
+            predictionDayIndex = metadata['targetPredictionDayIndex']
+            predictionProbability = predictionProbabilities[index]
+            symbolIndex = metadata["symbolIndex"]
+            stockSymbol = indexToSymbol[symbolIndex]
+            prediction = predictions[index]
+            testResult = testResults[index]
+            if prediction == 1:
+                predictionDayStockPredictions = []
+                if predictionDayIndex in OnePredicitons:
+                    predictionDayStockPredictions = OnePredicitons[predictionDayIndex]
+                else:
+                    OnePredicitons[predictionDayIndex] = predictionDayStockPredictions
+                predictionDict = {
+                    "wrongProbability": predictionProbability[0],
+                    "rightProbability": predictionProbability[1],
+                    "symbol": stockSymbol,
+                    "result": testResult,
+                    "predictionDayIndex": predictionDayIndex,
+                    "prediction": prediction
+                }
+                predictionDayStockPredictions.append(predictionDict)
+            else:
+                predictionDayStockPredictions = []
+                if predictionDayIndex in ZeroPredicitons:
+                    predictionDayStockPredictions = ZeroPredicitons[predictionDayIndex]
+                else:
+                    ZeroPredicitons[predictionDayIndex] = predictionDayStockPredictions
+                predictionDict = {
+                    "wrongProbability": predictionProbability[0],
+                    "rightProbability": predictionProbability[1],
+                    "symbol": stockSymbol,
+                    "result": testResult,
+                    "predictionDayIndex": predictionDayIndex,
+                    "prediction": prediction
+                }
+                predictionDayStockPredictions.append(predictionDict)
+            index+=1
+    
+    retValue = {
+        0: ZeroPredicitons,
+        1: OnePredicitons
+    }
+
+    return retValue
+        
+
+
+def predict(model, indexToSymbol, testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount):
+    reshaped = reshapeData(testData, testResult, featureLengthPerRetroDay, ignoreFeatureCount)
+    testDataReshaped = reshaped['x']
+    testResultReshaped = reshaped['y']
+    prediction = model.predict(testDataReshaped, verbose=2)
+    prediction_probabilities = list(prediction)
+
+    prediction = model.predict_classes(testDataReshaped, verbose=2)
+    predictionArr = prediction.tolist()
+    oneErrorRate(predictionArr, testResultReshaped, testData, prediction_probabilities, indexToSymbol)
+
 
 def daysToDictionary(dayIndexes, mappings):
     retValue = {}
@@ -720,10 +866,34 @@ def daysToDictionary(dayIndexes, mappings):
         retValue[dayIndex] = mappings[dayIndex]
     return retValue
 
+# def retrieveTrainingDataFromJSON(dayIndexStart, dayIndexEnd, tickerSymbols, config = None):
+#     loopStartTime = dayIndexStart
+#     if config is None:
+#         config = WeatherManPredictionTestConfig()
+#     loopEndTime = loopStartTime + config.numberOfDaysForTraining
+
+#     while loopEndTime < dayIndexEnd:
+#         dataIndexToCounter = {}
+#         symbolToDayData = {}
+#         symbolCounter = 0
+#         totalDays = years * daysPerYear
+#         for symbol in tickerSymbols:
+#             if symbol not in symbolToDayData:
+#                 tickerData = load_time_series_daily(symbol)
+#                 print("symbol is "+ str(symbol))
+#                 stockDataDayCount = len(tickerData)
+#                 if stockDataDayCount > totalDays:
+#                     outlookResult = getDayOutlook(tickerData, loopStartTime, loopEndTime, symbolIndex = symbolCounter)
+#                     symbolToDayData[symbol] = outlookResult
+#                     dataIndexToCounter[symbolCounter] = symbol
+#                     symbolCounter += 1
+#                 else:
+#                     print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
+
+
+
 def runExec(tickerSymbols = None):
     defaultSymbol = "MMM"
-    constDayNumber = 678687647816781687
-    earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
     years = 0.3
     daysPerYear = 365
@@ -732,7 +902,7 @@ def runExec(tickerSymbols = None):
     finalTime = None;# earliestTime + datetime.timedelta(days=(60))
     if not tickerSymbols:
         tickerSymbols = [defaultSymbol]
-    dataIndexToCounter = {}
+    dataIndexToSymbol = {}
     symbolToDayData = {}
     symbolCounter = 0
     for symbol in tickerSymbols:
@@ -743,7 +913,7 @@ def runExec(tickerSymbols = None):
             if stockDataDayCount > totalDays:
                 outlookResult = getDayOutlook(tickerData, earliestTime, finalTime, symbolIndex = symbolCounter)
                 symbolToDayData[symbol] = outlookResult
-                dataIndexToCounter[symbolCounter] = symbol
+                dataIndexToSymbol[symbolCounter] = symbol
                 symbolCounter += 1
             else:
                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
@@ -798,8 +968,12 @@ def runExec(tickerSymbols = None):
                 
 
         
-        buildModelAndPredictModel(trainData,trainResult,testData, testResult, symbolFeatureLengthPerRetroDay, ignoreFeatureCount, (testData, testResult), dataIndexToCounter)
-
+        model = buildPredictionModel(trainData,trainResult,testData, testResult, symbolFeatureLengthPerRetroDay, ignoreFeatureCount, (testData, testResult), dataIndexToSymbol)
+        modelAssessment = assessPredictions(model, testData, testResult, symbolFeatureLengthPerRetroDay, ignoreFeatureCount, dataIndexToSymbol)
+        print(str(modelAssessment))
+        
+        finalAccuracy = (modelAssessment['correctPredictions']/ modelAssessment['totalOnesPredicted']) * 100
+        print("Bidding accuracy is "+str(finalAccuracy))
     else:
         print("Could not find data to process")
 
