@@ -171,7 +171,7 @@ def getPreceedingDayFeatures(dayIndex, timeData):
     retValue = (lowestInflextionPointsFeatures, highestInflextionPointFeatures)
     return retValue
 
-def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForFeatures = 120, dayCount = 4, symbolIndex = 0):
+def getDayOutlook(tickerData, earliestDay = None, latestDay = None, dayCountForFeatures = 120, dayCount = 3, symbolIndex = 0):
     '''
     function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
     X is provided with the arg 'dayCount'. These day points have to be within tickerData.
@@ -725,11 +725,11 @@ def runExec(tickerSymbols = None):
     constDayNumber = 678687647816781687
     earliestDayInTickerData = constDayNumber
     currentTime = datetime.datetime.now()
-    years = 1
+    years = 0.3
     daysPerYear = 365
     totalDays = years * daysPerYear
     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
-    finalTime = earliestTime + datetime.timedelta(days=(60))
+    finalTime = None;# earliestTime + datetime.timedelta(days=(60))
     if not tickerSymbols:
         tickerSymbols = [defaultSymbol]
     dataIndexToCounter = {}
@@ -757,7 +757,7 @@ def runExec(tickerSymbols = None):
         ignoreFeatureCount = 0
 
 
-        futureDayCount = 14
+        futureDayCount = 28
         symbolFeatureLengthPerRetroDay = -3
         symbolKeys = symbolToDayData.keys()
 
