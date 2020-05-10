@@ -85,23 +85,39 @@ def processTimeSeries_DayToStock(timeSeriesDict):
     tickerKey = "ticker";
     beginningOfTime_str = "1970-01-01 00:00:00";
     beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
-    retValue = {
+    retValue = {}
+    symbolData = {
         
     }
 
-
+    allDayIndexes = set()
+    bounds = {
+        "min":None,
+        "max":None,
+    }
     for entry in timeSeriesDict:
         timeStr = entry;
         timeData = timeSeriesDict[entry];
         time = datetime.datetime.strptime(timeStr, '%Y-%m-%d')
         dayDiff = (time - beginningOfTime).days
+        currentMin = bounds["min"]
+        currentMax = bounds["max"]
+
+        if currentMin is None or dayDiff < currentMin:
+            currentMin = dayDiff
+            bounds["min"] = currentMin
+
+        if currentMax is None or currentMax < dayDiff:
+            currentMax = dayDiff
+            bounds["max"] = currentMax
 
         tickerData = []
-        if dayDiff in retValue:
-            tickerData = retValue[dayDiff][tickerKey]
+        allDayIndexes.add(dayDiff);
+        if dayDiff in symbolData:
+            tickerData = symbolData[dayDiff][tickerKey]
 
         else:
-            retValue[dayDiff] = {
+            symbolData[dayDiff] = {
                 ""+tickerKey+"": tickerData
             };
         openPrice = float(timeData["1. open"]);
@@ -117,5 +133,9 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         tickerData.append(closePrice);#3
         tickerData.append(avgPrice);#4
         
-    
+    # symbolData["allDayIndexes"] = allDayIndexes
+    # symbolData["dayBounds"] = bounds
+    retValue["symbolData"] = symbolData
+    retValue["dayBounds"] = bounds
+    retValue["allDayIndexes"] = allDayIndexes
     return retValue;

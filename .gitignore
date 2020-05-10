@@ -1,6 +1,8 @@
 LibFiles/temp/*
 LibFiles/__pycache__/*
 TrainingData/StockDump/*
+libfiles/temp/lastBatch.txt
+libfiles/temp/lastBatch.txt
 datafiles/*
 *__pycache__
 .vscode
