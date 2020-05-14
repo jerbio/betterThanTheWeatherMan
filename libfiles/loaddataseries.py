@@ -35,7 +35,9 @@ def load_time_series_daily(
 
 
     if(len(allNames) > 0):
-        for fileName in allNames:
+        nameKeys = list(allNames.keys())
+        nameKeys = sorted(allNames, reverse=True)
+        for fileName in nameKeys:
             namePathTuple = allNames[fileName]
             latestFileName = namePathTuple[0];
             jsonFileName = namePathTuple[1];
@@ -124,6 +126,7 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         lowestPrice = float(timeData["3. low"]);
         highstPrice = float(timeData["2. high"]);
         closePrice = float(timeData["4. close"]);
+        volume = float(timeData["5. volume"]);
         avgPrice = (closePrice + openPrice)/2
         
         # DO NOT CHANGE THE APPEND ORDER 
@@ -132,6 +135,7 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         tickerData.append(highstPrice);#2
         tickerData.append(closePrice);#3
         tickerData.append(avgPrice);#4
+        tickerData.append(volume);#5
         
     # symbolData["allDayIndexes"] = allDayIndexes
     # symbolData["dayBounds"] = bounds

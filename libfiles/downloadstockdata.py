@@ -69,9 +69,15 @@ def downloadStockBySymbol (
     fullFolderPath = folderPath +"\\"+ series_type+"\\"+symbol;
 
     pathLookup = filePath if filePath else os.path.join(dirname, fullFolderPath)
-    if ignoreIfExists and os.path.exists(pathLookup):
-        print("Not downloading "+symbol+" because already exists" )
-        return
+    if os.path.exists(pathLookup):
+        filesInPath = []
+        walk = os.walk
+        for (dirpath, dirnames, filenames) in walk(pathLookup):
+            for fileName in filenames:
+                filesInPath.append(fileName)
+        if ignoreIfExists and len(filesInPath) > 0:
+            print("Not downloading "+symbol+" because already exists" )
+            return
 
     lastEntry = getTimeOfLastRequest();
     print("Last update is ", lastEntry)

@@ -1,21 +1,17 @@
-from libfiles.downloadstockdata import downloadStockBySymbol
-from libfiles.loaddataseries import load_time_series_daily
-import matplotlib.pyplot as plt 
-
-stockGroupings = {
-    "technologySW": ["GOOG", "MSFT", "FB", "AMZN", "AAPL", "NFLX", "TWTR"],
-    "technologyHW": ["INTC","AMD", "TSM", "SNE"],
-    "finance": ["MS", "GS", "BAC"],
-    "travel": ["AAL", "DAL", "UAL"],
-    "weed": ["CRON", "ACB", "CBDS"],
-    "retail": ["WMT", "TGT", "WBA"]
-    }
-filePath = "d:\\WeatherManDump"
-for key in stockGroupings:
-    seriesType = "TIME_SERIES_INTRADAY"
-    stockSymbols = stockGroupings[key]
-    for symbol in stockSymbols:
-        downloadStockBySymbol(symbol, seriesType, filePath) # This downloads the time ticker data
+from libfiles.idealpricedsymbols import maxSymbols, subSetOfTech, SubsetOfFinance
+from libfiles.downloadstockdata import groupSymbolRequest
 
 
+allTheSymbols = []
+allTheSymbols.extend(maxSymbols)
+allTheSymbols.extend(subSetOfTech)
+allTheSymbols.extend(SubsetOfFinance)
+allTheSymbols = list(set(allTheSymbols))
+groupSymbolRequest(allTheSymbols, ignoreIfExists = False)
 
+
+# groupSymbolRequest(maxSymbols, ignoreIfExists = True)
+# groupSymbolRequest(subSetOfTech, ignoreIfExists = True)
+# groupSymbolRequest(SubsetOfFinance, ignoreIfExists = True)
+
+# runExec(downloadedSymbols)

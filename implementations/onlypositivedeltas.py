@@ -6,7 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense
-from .multiDayEvaluation import WeatherManPredictionTestConfig 
+import math
 import matplotlib.pyplot as plt
 from numpy import array, transpose
 
@@ -18,6 +18,8 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from libfiles.loaddataseries import load_time_series_daily
+from .weathermanpredictionconfig import WeatherManPredictionConfig
+from weatherutility import dayIndexFromStart, timeFromDayIndex
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -27,10 +29,8 @@ from libfiles.loaddataseries import load_time_series_daily
 # set_session(sess)  # set this TensorFlow session as the default session for Keras
 
 
-# This works by looking forward into a given number of days from a given day.
-# It generates a collecion of all the deltass of the future days high from the a given days opening price
-# Any day with delta higher than 'deltaLimit' will be set to some max value
 def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
+    '''gets the X number of days prior to currentDayIndex within the tickerDictionary. X is determined by dayCount'''
     retValue = []
     cons_loop_counter = 7 # seven because a stock might not have data for a week
     maxCountLoop = cons_loop_counter
@@ -54,7 +54,7 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
 
 
 
-def getPreceedingDayFeatures(dayIndex, timeData):
+def getPreceedingDayInflectionFeatures(dayIndex, timeData):
     earliestDay = dayIndex - 91
     dayIndexesDict = {}
     tickerInfo = timeData[dayIndex]
@@ -88,11 +88,6 @@ def getPreceedingDayFeatures(dayIndex, timeData):
             foundEarliestDay = True
             break
 
-    def sortByHighPrice(x, y):
-        return x[maxPriceKey][1] - y[maxPriceKey][1]
-    
-    def sortByLowPrice(x, y):
-        return x[lowPriceKey][1] - y[lowPriceKey][1]
     allMaxes = []
     for key in dayIndexesDict:
         dayIndexes = dayIndexesDict[key]['indexes']
@@ -112,12 +107,14 @@ def getPreceedingDayFeatures(dayIndex, timeData):
     
     allvalues = list(dayIndexesDict.values())
     
-    inflextionCount = 3
+    inflextionCount = 7
     sortedByHigh =sorted(allvalues, key=lambda highPrice: highPrice[maxPriceKey][1])
     sortedByLow =sorted(allvalues, key=lambda lowPrice: lowPrice[lowPriceKey][1])
 
     highestInflexionPoints = sortedByHigh[len(sortedByHigh)-inflextionCount:]
+    highestInflexionPoints = sorted(highestInflexionPoints, key=lambda inflextionPoint: inflextionPoint[maxPriceKey][0])#sorts by day index
     lowestInflextionPoints = sortedByLow[:inflextionCount]
+    lowestInflextionPoints = sorted(lowestInflextionPoints, key=lambda inflextionPoint: inflextionPoint[lowPriceKey][0])#sorts by day index
     openPrice = tickerInfo['ticker'][0]
     lowestPrice = tickerInfo['ticker'][1]
     highestPrice = tickerInfo['ticker'][2]
@@ -131,7 +128,8 @@ def getPreceedingDayFeatures(dayIndex, timeData):
         avgPriceGradient = []
         lowPriceGradient = []
         highestPriceGradient = []
-        averageDelta = 0
+        averageDayDelta = 0
+        mostRecentDayDelta = inflexionPoints[len(inflexionPoints) - 1][0] - dayIndex
         for inflexionPoint in inflexionPoints:
             inflexionDayIndex = inflexionPoint[0]
             inflexionDayPrice = inflexionPoint[1]
@@ -140,21 +138,25 @@ def getPreceedingDayFeatures(dayIndex, timeData):
                 dayDeltas.append(dayDiff)
                 diffBetweenDelta = dayDiff - currentDayDiff
                 diffBetweenDeltas.append(diffBetweenDelta)
+                currentDayDiff = dayDiff
                 gradientAvgPriceForDay = (avgPrice - inflexionDayPrice)/dayDiff
                 avgPriceGradient.append(gradientAvgPriceForDay)
-                gradientLowPriceForDay = (lowestPrice - inflexionDayPrice)/dayDiff
+                gradientLowPriceForDay = ((lowestPrice - inflexionDayPrice)/dayDiff) *100
                 lowPriceGradient.append(gradientLowPriceForDay)
-                gradientHighPriceForDay = (highestPrice - inflexionDayPrice)/dayDiff
+                gradientHighPriceForDay = ((highestPrice - inflexionDayPrice)/dayDiff)*100
                 highestPriceGradient.append(gradientHighPriceForDay)
 
         if len(diffBetweenDeltas) != 0:
-            averageDelta = sum(diffBetweenDeltas)/len(diffBetweenDeltas)
-        averagePriceDelta = sum(avgPriceGradient)/len(avgPriceGradient)
+            averageDayDelta = (sum(diffBetweenDeltas)/len(diffBetweenDeltas)) * 100
+        averagePriceDelta = (sum(avgPriceGradient)/len(avgPriceGradient)) * 100
         retValue = []
-        retValue.append(averageDelta)
+        
+        retValue.append(averageDayDelta)
         retValue.extend(avgPriceGradient)
         retValue.append(averagePriceDelta)
         # retValue.extend(diffBetweenDeltas)
+        # retValue.extend(dayDeltas)
+        # retValue.append(mostRecentDayDelta)
         # retValue.extend(highestPriceGradient)
         # retValue.extend(lowPriceGradient)
         return retValue
@@ -168,14 +170,31 @@ def getPreceedingDayFeatures(dayIndex, timeData):
         [[data[lowPriceKey][0], data[lowPriceKey][1]] for data in lowestInflextionPoints]
         )
 
-    retValue = (lowestInflextionPointsFeatures, highestInflextionPointFeatures)
+    retValue = [lowestInflextionPointsFeatures,
+                 highestInflextionPointFeatures
+                 ]
     return retValue
 
-def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, symbolIndex, dayOfPrediction):
+def getPrecedingDay(dayIndex, tickerData):
+    retryCounterLimit = 7
+    retryCounter = 0
+    retValue = -1
+    precedingDayIndex = dayIndex - 1
+    while retryCounter < retryCounterLimit:
+        if precedingDayIndex in tickerData:
+            retValue = precedingDayIndex
+            break
+        precedingDayIndex -= 1
+        retryCounter += 1
+    return retValue
+
+
+
+def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbolIndex, dayOfPrediction):
     dayCountForFeatures = config.numberOfRetroDays
     precedingNintyDays = []
     possibleRetroDay = int(dayOfPrediction) - dayCountForFeatures
-    retryCount = 3
+    retryCount = 7
     foundEarliestDay = False
     featureLen = -1
     tickerFeaturesPerDay = -1
@@ -186,11 +205,15 @@ def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, s
     retroTrainingDays = 0
 
     # dayOfPrediction = int(day)
+
     day = int(dayOfPrediction)
+
     openPrice = tickerData[day]["ticker"][0]
     highPrice = tickerData[day]["ticker"][2]
     lowPrice = tickerData[day]["ticker"][1]
     closePrice = tickerData[day]["ticker"][3]
+    
+
 
     while retryCount > 0: #gets the earliest day before or equal to 'dayCountForFeatures' thats within tickerData
         if possibleRetroDay in tickerData:
@@ -199,7 +222,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, s
         possibleRetroDay -= 1
         retryCount -= 1
     if foundEarliestDay:
-        while possibleRetroDay < dayOfPrediction:
+        while possibleRetroDay <= dayOfPrediction:
             if possibleRetroDay in tickerData:
                 featureDay = beginningOfTime + datetime.timedelta(days=(possibleRetroDay))
                 weekDay = featureDay.weekday()
@@ -219,6 +242,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, s
                 retroDayHighPrice = retroDayTickerData['ticker'][2]
                 retroDayLowPrice = retroDayTickerData['ticker'][1]
                 retroDayAvgPrice = retroDayTickerData['ticker'][4]
+                # volume = retroDayTickerData["ticker"][5]
                 
                 while previousDayCounter > 0 and previousDayCountLoopLimit > 0:
                     previousDayCount -=1
@@ -305,10 +329,10 @@ def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, s
                 dataForDay.append(retroDayAvgPrice)
                 # dataForDay.append(weekDay)
 
-                inflectionPointFeatures = getPreceedingDayFeatures(dayOfPrediction, tickerData)
+                inflectionPointFeatures = getPreceedingDayInflectionFeatures(dayOfPrediction, tickerData)
                 if inflectionPointFeatures is not None:
-                    dataForDay.extend(inflectionPointFeatures[0])
-                    dataForDay.extend(inflectionPointFeatures[1])
+                    for precedingDayInflectionFeatures in inflectionPointFeatures:
+                        dataForDay.extend(precedingDayInflectionFeatures)
                     precedingNintyDays.extend(dataForDay)
                     retroTrainingDays +=1
                 featureLen = len(dataForDay)
@@ -331,7 +355,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionTestConfig, tickerData, s
 
     return retValue
 
-def getDayOutlook(config:WeatherManPredictionTestConfig, tickerData, earliestDay = None, latestDay = None, symbolIndex = 0):
+def getDayOutlook(config:WeatherManPredictionConfig, tickerData, earliestDay = None, latestDay = None, symbolIndex = 0):
     '''
     function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
     X is provided with the arg 'dayCount'. These day points have to be within tickerData.
@@ -384,7 +408,7 @@ def getDayOutlook(config:WeatherManPredictionTestConfig, tickerData, earliestDay
             maxPositive = 0
             maxNegative = 0
             allRetroDayIndexes = set()
-            retryLimit = dayCount + 2
+            retryLimit = dayCount + 2 #we assume 2 days for weekend + the occasional 2days for back to back holidays and 1 for the logic dayIndex != day which ignores the current prediction day
             while counter < retryLimit and len(nextDaySeriesIndexes)<dayCount:
                 dayIndex = day+counter
                 if dayIndex in tickerData and dayIndex != day :
@@ -425,7 +449,7 @@ def getDayOutlook(config:WeatherManPredictionTestConfig, tickerData, earliestDay
                         maxNegative = percentLow
 
                     ignoreDay = False
-                    nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay, percentLow])
+                    nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay, percentLow, dayIndex])
                 counter += 1
 
             if not ignoreDay:
@@ -510,6 +534,8 @@ def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
     featureLengthPerRetroDay = None
     ignoreFeatureCount = None
     symbolKeys = list(tickerData.keys())
+    keyLength =len(symbolKeys)
+    print ("hey length is "+ str(keyLength))
     random.shuffle(symbolKeys)
     for symbolKey in symbolKeys:
         dictOfDaysToPreceedingData = tickerData[symbolKey]
@@ -608,10 +634,10 @@ def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
     testDataCount = len(testData)
     trainDataCount = len(trainData)
 
-    if (testDataCount == 0 and testRatio != 0):
+    if (testDataCount == 0 and testRatio != 0 and trainDataCount > 1):
         return convertForTraining(tickerData, testRatio, True)
     
-    if (trainDataCount == 0 and testRatio != 1):
+    if (trainDataCount == 0 and testRatio != 1 and testDataCount > 1):
         return convertForTraining(tickerData, testRatio, True)
 
 
@@ -678,7 +704,7 @@ def reshapeData(xs, ys, featureLengthPerRetroDay):
     }
 
 
-def buildPredictionModel(config:WeatherManPredictionTestConfig, trainData, trainResult, testData, testResult, featureLengthPerRetroDay, schewedData = None, symbolToIndex = None):
+def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResult, testData, testResult, featureLengthPerRetroDay, schewedData = None, symbolToIndex = None):
     combinedFeaturesPerDay = len(trainData[0]["precedingDays"])
     numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
     numberOfDaysAsInt = int(numberOfDays) # the number of retro days 
@@ -703,7 +729,7 @@ def buildPredictionModel(config:WeatherManPredictionTestConfig, trainData, train
     ###### Model creation 
     model = tf.keras.Sequential()
     model.add(layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
-    model.add(layers.Dropout(0.35))
+    model.add(layers.Dropout(config.dropout))
     model.add(layers.Dense(256, activation='relu'),)
     model.add(layers.Dense(optionCount, activation='softmax'))
 
@@ -722,7 +748,7 @@ def buildPredictionModel(config:WeatherManPredictionTestConfig, trainData, train
     history = model.fit(trainDataReshaped, trainResultReshaped, 
         validation_data= validationData,
         epochs=numberOfEpochs,
-        verbose=2
+        # verbose=2
         )
     retValue = (model, None, None)
     if testData is not None and testResult is not None:
@@ -783,7 +809,7 @@ def pickStockFromProbabilities(predictionProbability, numberOfStockForProbabilit
 
 
 
-def assessPredictions(model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, stockPerDay = 2, printSomeThing = False):
+def assessPredictions(config:WeatherManPredictionConfig, model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, stockPerDay = 2, printSomeThing = False):
     reshaped = reshapeData(testData, testResults, featureLengthPerRetroDay)
     testDataReshaped = reshaped['x']
 
@@ -808,7 +834,7 @@ def assessPredictions(model, testData, testResults, featureLengthPerRetroDay, in
             predictionDayStockPredictions = marketUpPredictions[predictionDayIndex]
             # for predictionDayIndex in predictionDayStockPredictions:
             # allStockPredictions = predictionDayStockPredictions[predictionDayIndex]
-            selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions, stockPerDay=stockPerDay)
+            selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions, stockPerDay=stockPerDay, threshold=config.threshold)
             willBuyTHeFollowing.extend(selectedStocks)
             for selectedStock in selectedStocks:
                 totalOnesPredicted += 1
@@ -885,23 +911,6 @@ def oneErrorRate (prediction, result, testData, prediction_probabilities = None,
         print("Sorted CombinedPredictions count " + str(sortedOnlyOneCounts))
 
 
-def dayIndexFromStart(time):
-    '''
-        Giving a time after 1970 Jan 1 this function returns the number of days from 1970 Jan 1 12:00 AM rounded down
-    '''
-    beginningOfTime_str = "1970-01-01 00:00:00"
-    beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
-
-    retValue = int((time - beginningOfTime).days)
-    return retValue
-
-
-def timeFromDayIndex(dayIndex):
-    beginningOfTime_str = "1970-01-01 00:00:00"
-    beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
-    retValue = beginningOfTime + datetime.timedelta(days=(dayIndex))
-
-    return retValue
 
 def processPredictions(predictions, predictionProbabilities, testData, testResults, indexToSymbol):
     OnePredicitons = {} # this holds a dayIndex -> ([topFiveProbabilityStockData], set(winningStocks))
@@ -929,7 +938,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
                 predictionDict = {
                     "wrongProbability": predictionProbability[0],
                     "rightProbability": predictionProbability[1],
-                    "symbol": stockSymbol,
+                    "symbol": symbolIndex,
                     "result": testResult,
                     "predictionDay": str(timeFromDayIndex(predictionDayIndex)),
                     "predictionDayIndex": predictionDayIndex,
@@ -945,7 +954,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
                 predictionDict = {
                     "wrongProbability": predictionProbability[0],
                     "rightProbability": predictionProbability[1],
-                    "symbol": stockSymbol,
+                    "symbol": symbolIndex,
                     "result": testResult,
                     "predictionDay": str(timeFromDayIndex(predictionDayIndex)),
                     "predictionDayIndex": predictionDayIndex,
@@ -963,7 +972,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
         
 
 
-def predict(config:WeatherManPredictionTestConfig, model, indexToSymbol, testData, featureLengthPerRetroDay):
+def predict(config:WeatherManPredictionConfig, model, indexToSymbol, testData, featureLengthPerRetroDay):
     reshaped = reshapeData(testData, None, featureLengthPerRetroDay)
     testDataReshaped = reshaped['x']
 
@@ -993,7 +1002,7 @@ def predict(config:WeatherManPredictionTestConfig, model, indexToSymbol, testDat
         predictionResultMapping[predictionResult].append(predictionDict)
 
     onePredictions = predictionResultMapping[1]
-    retValue = pickStockFromProbabilities(onePredictions, stockPerDay=config.stockPerDay)
+    retValue = pickStockFromProbabilities(onePredictions, stockPerDay=config.stockPerDay, threshold=config.threshold)
     return retValue
     
 
@@ -1011,7 +1020,7 @@ def loadAllSymbolTickerDataIntoMemory(tickerSymbols):
         retValue[symbol] = tickerData
     return retValue
 
-def getAllTrainingPieces(config:WeatherManPredictionTestConfig, tickerSymbols):
+def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     allSymbolsToTickerData = loadAllSymbolTickerDataIntoMemory(tickerSymbols)
     bounds = {
         "min":None,
@@ -1064,7 +1073,7 @@ def getAllTrainingPieces(config:WeatherManPredictionTestConfig, tickerSymbols):
     #         retryCount -= 1
 
 
-def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionTestConfig):
+def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig):
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
     entryDayStartIndex = dayIndexFromStart(boundStartTime)
@@ -1108,6 +1117,7 @@ def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, co
     alreadyPredictedDays = set()
     rebuildModel = False
     foundPredictionDay = False
+    eachdayAssessment = {}
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
         trainingEndTime = timeFromDayIndex(trainingDayEndIndex)
@@ -1116,13 +1126,12 @@ def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, co
         model = None
         dayCountBeforeModelRebuild = config.numberOfDaysBeforeRetrainingModel
         dayBeforeModelrebuildCounter = 0
-        predictionDayStartDayIndex = trainingDayEndIndex + 1# config.numberOfOutlookDays
+        predictionDayStartDayIndex = trainingDayEndIndex + config.numberOfOutlookDays
         predictionDayEndDayIndex = predictionDayStartDayIndex+1
         predictionDayCounter = 0
         rebuildModel = True
         foundPredictionDay = False
         while dayBeforeModelrebuildCounter < dayCountBeforeModelRebuild and predictionDayStartDayIndex <= loopMaxIndex:
-            
             if rebuildModel:
                 model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)['model']
                 rebuildModel = False
@@ -1145,20 +1154,26 @@ def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, co
                 trainData = dataFormated['trainX']
                 trainResult = dataFormated['trainY']
                 featureDayLength = dataFormated['featureLengthPerRetroDay']
-                modelAssessment = assessPredictions(model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
+                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
                 totalOnesPredicted =modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
                 totalOnesPrediction += totalOnesPredicted
                 totalCorrectOnesPrediction += correctPredictions
                 print("Model is for the time frame "+str(trainingStartTime) +" - " + str(trainingEndTime))
                 if totalOnesPredicted != 0:
+                    predictionsResults = [] 
+                    if predictionDayStartDayIndex in eachdayAssessment:
+                        predictionsResults = eachdayAssessment[predictionDayStartDayIndex]
+                    else:
+                        eachdayAssessment[predictionDayStartDayIndex] = predictionsResults
+                    predictionsResults.append(modelAssessment)
                     dayFinalAccuracy = (correctPredictions/totalOnesPredicted ) * 100
                     print("Bidding accuracy for Day "+str(predictionDayStartTime)+" is "+str(dayFinalAccuracy))
 
                 if totalOnesPrediction != 0:
                     soFarAccuracy = (totalCorrectOnesPrediction/totalOnesPrediction ) * 100
                     print("Total accuracy sofar "+str(soFarAccuracy))
-                print("processed "+str(totalDayCounter)+" days")
+                print("processed "+str(totalDayCounter)+" days "+str(predictionDayStartTime))
                 alreadyPredictedDays.add(predictionDayStartDayIndex)
                 dayBeforeModelrebuildCounter+=1
             foundPredictionDay = True
@@ -1173,7 +1188,10 @@ def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, co
             trainingDayStartIndex += 1
             trainingDayEndIndex += 1
     
+    print("EACH DAY ASSESSMENT")
+    print(eachdayAssessment)
     config.printMe()
+
     print("Complete time frame is "+str(timeFromDayIndex(trainingDayStartIndex))+" to "+str(timeFromDayIndex(trainingDayEndIndex)))
     if totalOnesPrediction != 0:
         finalAccuracy = (totalCorrectOnesPrediction/totalOnesPrediction ) * 100
@@ -1183,12 +1201,13 @@ def retrieveTrainingDataFromJSON(boundStartTime, boundEndTime, tickerSymbols, co
     else:
         print("Nothing to buy")
 
-def getBestModel(config:WeatherManPredictionTestConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
+def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
     retValue = None
     models = []
     modelRebuildCounter = 0
     symbolToDayData = {}
     numberOfDaysForTraining = config.numberOfDaysForTraining
+    symbolReadStart = datetime.datetime.now()
     for symbol in allSymbolsToTickerData:
         if symbol not in symbolToDayData:
             tickerData = allSymbolsToTickerData[symbol]["symbolData"]
@@ -1200,6 +1219,11 @@ def getBestModel(config:WeatherManPredictionTestConfig, allSymbolsToTickerData, 
                 symbolToDayData[symbol] = outlookResult
             else:
                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
+    
+    symbolReadEnd = datetime.datetime.now()
+
+    timeSpan = symbolReadEnd - symbolReadStart
+    print("symbol read took "+ str(timeSpan.total_seconds()) +"s")
     while modelRebuildCounter < config.modelRebuildCount:
         modelInfo = getModel(config, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
         if(modelInfo is not None):
@@ -1212,7 +1236,7 @@ def getBestModel(config:WeatherManPredictionTestConfig, allSymbolsToTickerData, 
     return retValue
 
 
-def getModel(config:WeatherManPredictionTestConfig, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
+def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
     
     retValue = None
     if len(symbolToDayData) > 0:
@@ -1239,7 +1263,7 @@ def getModel(config:WeatherManPredictionTestConfig, symbolToDayData, allSymbolsT
     return retValue
 
 
-def getStockSuggestionSymbolToData(config:WeatherManPredictionTestConfig, allSymbolsToTickerData, predictonDayIndex):
+def getStockSuggestionSymbolToData(config:WeatherManPredictionConfig, allSymbolsToTickerData, predictonDayIndex):
     symbolToDayData = {}
     numberOfDaysForTraining = config.numberOfDaysForTraining
     for symbol in allSymbolsToTickerData:
@@ -1251,9 +1275,10 @@ def getStockSuggestionSymbolToData(config:WeatherManPredictionTestConfig, allSym
                 symbolPredictionData[predictonDayIndex] = getRetroDayTrainingData(config, tickerData, symbol, predictonDayIndex)
                 outlookResult = symbolPredictionData
                 symbolToDayData[symbol] = outlookResult
+                print("found "+str(timeFromDayIndex(predictonDayIndex))+" for "+str(symbol))
             else:
                 if predictonDayIndex not in tickerData:
-                    print("Cannot find "+str(timeFromDayIndex(predictonDayIndex))+" for {symbol}")
+                    print("Cannot find "+str(timeFromDayIndex(predictonDayIndex))+" for "+str(symbol))
                 else:
                     print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
     
@@ -1261,12 +1286,15 @@ def getStockSuggestionSymbolToData(config:WeatherManPredictionTestConfig, allSym
     
 
 def getStocks(tickerSymbols, date=None):
-    config = WeatherManPredictionTestConfig()
+    config = WeatherManPredictionConfig()
+    config.epochCount = 200
+    config.modelRebuildCount = 3
     currentTime = datetime.datetime.now()
+    config.printMe()
     if date is None:
         date = currentTime
     earliestTime = currentTime + datetime.timedelta(days=(-180))
-    finalTime = date
+    finalTime = date + datetime.timedelta(days=(-1))
 
     print ("We are about to predict stocks to buy on "+str(finalTime))
 
@@ -1304,18 +1332,35 @@ def getStocks(tickerSymbols, date=None):
 
 
 def runExec(tickerSymbols = None):
-    config = WeatherManPredictionTestConfig()
+    config = WeatherManPredictionConfig()
+    config.iterationNotes = '''Changed how inflection points of preceding day works.
+        added inflection points and fixed logincal errors
+        retryLimit = dayCount + 2 
+        subSetOfTech[51:102]
+        retValue = [lowestInflextionPointsFeatures,
+                 highestInflextionPointFeatures
+                 ]
+     '''
+    
+    getStocks(tickerSymbols)
+    return
     config.printMe()
-    # getStocks(tickerSymbols)
-    # return
     currentTime = datetime.datetime.now()
-    earliestTime = currentTime + datetime.timedelta(days=(-180))
-    finalTime = currentTime #earliestTime + datetime.timedelta(days=(120))
-    retrieveTrainingDataFromJSON(earliestTime, finalTime, tickerSymbols, config)
+    
+    earliestTime = currentTime + datetime.timedelta(days=(-365))
+    finalTime = currentTime  + datetime.timedelta(days=(0))
+    confidenceAnalysisStart = datetime.datetime.now()
+    print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
+    dayIntervalConfidenceTest(earliestTime, finalTime, tickerSymbols, config)
+    print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
+    confidenceAnalysisEnd = datetime.datetime.now()
+    timeSpan = confidenceAnalysisEnd - confidenceAnalysisStart
+    print("confidence analysis took "+ str(timeSpan.total_seconds()) +"s")
+    config.printMe()
 
 # def runExec(tickerSymbols = None):
 #     defaultSymbol = "MMM"
-#     config = WeatherManPredictionTestConfig()
+#     config = WeatherManPredictionConfig()
 #     currentTime = datetime.datetime.now()
 #     years = 0.3
 #     daysPerYear = 365

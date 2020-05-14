@@ -1,4 +1,3 @@
-from implementations.onlypositivedeltas import runExec
 from libfiles.idealpricedsymbols import maxSymbols, subSetOfTech, SubsetOfFinance
 from libfiles.downloadstockdata import groupSymbolRequest
 
@@ -8,7 +7,7 @@ allTheSymbols.extend(maxSymbols)
 allTheSymbols.extend(subSetOfTech)
 allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
-groupSymbolRequest(allTheSymbols, ignoreIfExists = True)
+groupSymbolRequest(allTheSymbols, ignoreIfExists = False)
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)
