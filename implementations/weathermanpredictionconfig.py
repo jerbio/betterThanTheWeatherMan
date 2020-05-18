@@ -5,11 +5,11 @@ class WeatherManPredictionConfig:
     def __init__(self): 
         self.epochCount = 100
         self.daysPerYear = 365
-        self.percentageDeltaChange = 1
+        self.percentageDeltaChange = 3
         self.testRatio = 0.3
         self.numberOfTrainingWindowDays = 90
-        self.numberOfOutlookDays = 3 # The number of days to check if ther was sufficient percentage_delta_lift in the training delta set
-        self.modelRebuildCount = 1 # this is the number of retry model builds. This then picks the model with the best acuracy
+        self.numberOfOutlookDays = 7 # The number of days to check if ther was sufficient percentage_delta_lift in the training delta set
+        self.modelRebuildCount = 3 # this is the number of retry model builds. This then picks the model with the best acuracy
         self.numberOfDaysBeforeRetrainingModel = 2 # After this number days of prediction we'll need to rebuild model to prevent the model from losing its potency
         self.numberOfRetroDays = 120 # Number of fays from the past of a predictiona day to pull or build features
         self.earliestTimeInYearsFromToday = 1 # this is the earliest dayindex from which you'll use for training

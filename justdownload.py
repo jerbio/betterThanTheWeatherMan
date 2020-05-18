@@ -7,7 +7,7 @@ allTheSymbols.extend(maxSymbols)
 allTheSymbols.extend(subSetOfTech)
 allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
-groupSymbolRequest(allTheSymbols, ignoreIfExists = False)
+groupSymbolRequest(allTheSymbols, dontDownloadIfExists = False)
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)

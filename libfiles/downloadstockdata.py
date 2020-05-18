@@ -104,10 +104,10 @@ def groupSymbolRequest(
     symbols,
     series_type = "TIME_SERIES_DAILY",
     filePath = "",
-    ignoreIfExists = False
+    dontDownloadIfExists = False
     ):
     for symbol in symbols:
-        downloadStockBySymbol(symbol, series_type, filePath, ignoreIfExists)
+        downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
 
 
 def sendRequests(PARAMS, folderPath):

@@ -188,6 +188,19 @@ def getPrecedingDay(dayIndex, tickerData):
         retryCounter += 1
     return retValue
 
+def getNextDayIndex(dayIndex, tickerData):
+    retryCounterLimit = 7
+    retryCounter = 0
+    retValue = None
+    precedingDayIndex = dayIndex + 1
+    while retryCounter < retryCounterLimit:
+        if precedingDayIndex in tickerData:
+            retValue = precedingDayIndex
+            break
+        precedingDayIndex += 1
+        retryCounter += 1
+    return retValue
+
 
 
 def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbolIndex, dayOfPrediction):
@@ -212,7 +225,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbo
     highPrice = tickerData[day]["ticker"][2]
     lowPrice = tickerData[day]["ticker"][1]
     closePrice = tickerData[day]["ticker"][3]
-    
+    refPrice = openPrice
 
 
     while retryCount > 0: #gets the earliest day before or equal to 'dayCountForFeatures' thats within tickerData
@@ -222,7 +235,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbo
         possibleRetroDay -= 1
         retryCount -= 1
     if foundEarliestDay:
-        while possibleRetroDay <= dayOfPrediction:
+        while possibleRetroDay < dayOfPrediction:
             if possibleRetroDay in tickerData:
                 featureDay = beginningOfTime + datetime.timedelta(days=(possibleRetroDay))
                 weekDay = featureDay.weekday()
@@ -252,28 +265,28 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbo
                         tradingDayCount += 1
                     previousDayCountLoopLimit -= 1
 
-                predictionDayHighDeltaPercent = ((highPrice - closePrice) / closePrice) * 100
-                predictionDayOpenDeltaPercent = ((openPrice - closePrice) / closePrice) * 100
-                predictionDayLowDeltaPercent = ((lowPrice - closePrice) / closePrice) * 100
-                dataForDay.append(predictionDayHighDeltaPercent)
+                # predictionDayHighDeltaPercent = ((highPrice - refPrice) / refPrice) * 100
+                # predictionDayOpenDeltaPercent = ((openPrice - refPrice) / refPrice) * 100
+                # predictionDayLowDeltaPercent = ((lowPrice - refPrice) / refPrice) * 100
+                # dataForDay.append(predictionDayHighDeltaPercent)
                 # dataForDay.append(predictionDayOpenDeltaPercent)
-                dataForDay.append(predictionDayLowDeltaPercent)
+                # dataForDay.append(predictionDayLowDeltaPercent)
                 
                 avgPriceCategory = int((retroDayAvgPrice)/10)
                 dataForDay.append(avgPriceCategory)
 
 
-                openPricePredictionDayDelta = retroDayOpeningPrice - closePrice
-                closePricePredictionDayDelta = retroDayClosingPrice - closePrice
-                highPricePredictionDayDelta = retroDayHighPrice - closePrice
-                lowPricePredictionDayDelta = retroDayLowPrice - closePrice
-                avgPricePredictionDayDelta = retroDayAvgPrice - closePrice
+                openPricePredictionDayDelta = retroDayOpeningPrice - refPrice
+                closePricePredictionDayDelta = retroDayClosingPrice - refPrice
+                highPricePredictionDayDelta = retroDayHighPrice - refPrice
+                lowPricePredictionDayDelta = retroDayLowPrice - refPrice
+                avgPricePredictionDayDelta = retroDayAvgPrice - refPrice
 
-                openPricePredictionDayDeltaPercent = (openPricePredictionDayDelta/closePrice) * 100
-                closePricePredictionDayDeltaPercent = (closePricePredictionDayDelta/closePrice) * 100
-                highPricePredictionDayDeltaPercent = (highPricePredictionDayDelta/closePrice) * 100
-                lowPricePredictionDayDeltaPercent = (lowPricePredictionDayDelta/closePrice) * 100
-                avgPricePredictionDayDeltaPercent = (avgPricePredictionDayDelta/closePrice) * 100
+                openPricePredictionDayDeltaPercent = (openPricePredictionDayDelta/refPrice) * 100
+                closePricePredictionDayDeltaPercent = (closePricePredictionDayDelta/refPrice) * 100
+                highPricePredictionDayDeltaPercent = (highPricePredictionDayDelta/refPrice) * 100
+                lowPricePredictionDayDeltaPercent = (lowPricePredictionDayDelta/refPrice) * 100
+                avgPricePredictionDayDeltaPercent = (avgPricePredictionDayDelta/refPrice) * 100
                 
                 dataForDay.append(openPricePredictionDayDeltaPercent)
                 dataForDay.append(closePricePredictionDayDeltaPercent)
@@ -396,6 +409,7 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, earliestDay = N
             closePrice = tickerData[day]["ticker"][3]
             highPrice = tickerData[day]["ticker"][2]
             lowPrice = tickerData[day]["ticker"][1]
+            refPrice = closePrice
             
             nextDaySeriesIndexes = []
             nextDaySeriesChanges = []
@@ -408,23 +422,28 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, earliestDay = N
             maxPositive = 0
             maxNegative = 0
             allRetroDayIndexes = set()
+            notIncludedDays = set()
+            notIncludedDays.add(day)
+            # nextDayIndex = getNextDayIndex(day, tickerData)
+            # if nextDayIndex is not None:
+            #     notIncludedDays.add(nextDayIndex)
             retryLimit = dayCount + 2 #we assume 2 days for weekend + the occasional 2days for back to back holidays and 1 for the logic dayIndex != day which ignores the current prediction day
             while counter < retryLimit and len(nextDaySeriesIndexes)<dayCount:
                 dayIndex = day+counter
-                if dayIndex in tickerData and dayIndex != day :
+                if dayIndex in tickerData and dayIndex not in notIncludedDays:
                     activeDayCounter += 1
                     dayData = tickerData[dayIndex]
                     nextDaySeriesIndexes.append(dayData)
                     futureDayOpenPrice = dayData["ticker"][0]
                     futureDayHighPrice = dayData["ticker"][2]
                     futureDayClosePrice = dayData["ticker"][3]
-                    deltaOpen = futureDayOpenPrice - closePrice
-                    deltaHigh = futureDayHighPrice - closePrice
-                    deltaClose = futureDayClosePrice - closePrice
+                    deltaOpen = futureDayOpenPrice - refPrice
+                    deltaHigh = futureDayHighPrice - refPrice
+                    deltaClose = futureDayClosePrice - refPrice
 
-                    percentOpen = (deltaOpen/closePrice) * 100
-                    percentHigh = (deltaHigh/closePrice) * 100
-                    percentLow = (deltaClose/closePrice) * 100
+                    percentOpen = (deltaOpen/refPrice) * 100
+                    percentHigh = (deltaHigh/refPrice) * 100
+                    percentLow = (deltaClose/refPrice) * 100
 
                     dayDiff = counter
                     outlookDay = currentDay + datetime.timedelta(days=(dayDiff))
@@ -1117,6 +1136,9 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     alreadyPredictedDays = set()
     rebuildModel = False
     foundPredictionDay = False
+    numberOfPossiblePredictions = 0
+    numberOfActivePredictions = 0
+    sumOfPredictionSuccessRatio = 0
     eachdayAssessment = {}
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
@@ -1157,17 +1179,22 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
                 totalOnesPredicted =modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
+                numberOfPossiblePredictions +=1
+                
                 totalOnesPrediction += totalOnesPredicted
                 totalCorrectOnesPrediction += correctPredictions
                 print("Model is for the time frame "+str(trainingStartTime) +" - " + str(trainingEndTime))
                 if totalOnesPredicted != 0:
+                    numberOfActivePredictions +=1
                     predictionsResults = [] 
                     if predictionDayStartDayIndex in eachdayAssessment:
                         predictionsResults = eachdayAssessment[predictionDayStartDayIndex]
                     else:
                         eachdayAssessment[predictionDayStartDayIndex] = predictionsResults
                     predictionsResults.append(modelAssessment)
-                    dayFinalAccuracy = (correctPredictions/totalOnesPredicted ) * 100
+                    dayFinalAccuracyRatio = (correctPredictions/totalOnesPredicted )
+                    sumOfPredictionSuccessRatio+=dayFinalAccuracyRatio
+                    dayFinalAccuracy =  dayFinalAccuracyRatio * 100
                     print("Bidding accuracy for Day "+str(predictionDayStartTime)+" is "+str(dayFinalAccuracy))
 
                 if totalOnesPrediction != 0:
@@ -1195,9 +1222,9 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     print("Complete time frame is "+str(timeFromDayIndex(trainingDayStartIndex))+" to "+str(timeFromDayIndex(trainingDayEndIndex)))
     if totalOnesPrediction != 0:
         finalAccuracy = (totalCorrectOnesPrediction/totalOnesPrediction ) * 100
-        correctStocksPerday = totalCorrectOnesPrediction/totalDayCounter
         print("Bidding accuracy is "+str(finalAccuracy))
-        print("You had an average of "+ str(correctStocksPerday) + " per day ")
+        activePredictionRatio = (numberOfActivePredictions/numberOfPossiblePredictions) * 100
+        print("There was a prediction "+ str(activePredictionRatio) + "pct of the days")
     else:
         print("Nothing to buy")
 
@@ -1294,7 +1321,7 @@ def getStocks(tickerSymbols, date=None):
     if date is None:
         date = currentTime
     earliestTime = currentTime + datetime.timedelta(days=(-180))
-    finalTime = date + datetime.timedelta(days=(-1))
+    finalTime = date #+ datetime.timedelta(days=())
 
     print ("We are about to predict stocks to buy on "+str(finalTime))
 
@@ -1342,12 +1369,12 @@ def runExec(tickerSymbols = None):
                  ]
      '''
     
-    getStocks(tickerSymbols)
-    return
+    # getStocks(tickerSymbols)
+    # return
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-365))
+    earliestTime = currentTime + datetime.timedelta(days=(-165))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
