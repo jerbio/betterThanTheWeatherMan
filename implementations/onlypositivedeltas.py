@@ -1164,7 +1164,12 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
         foundPredictionDay = False
         while dayBeforeModelrebuildCounter < dayCountBeforeModelRebuild and predictionDayStartDayIndex <= loopMaxIndex:
             if rebuildModel:
-                modelResults = getModels(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+                modelResults = []
+                bestModelCounter = 0
+                while bestModelCounter < config.modelRebuildCount:
+                    bestModel = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+                    modelResults.append(bestModel)
+                    bestModelCounter+=1
                 models = [modelResult['model']  for modelResult in modelResults]
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays:
