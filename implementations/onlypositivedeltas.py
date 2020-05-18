@@ -1154,7 +1154,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
         trainingEndTime = timeFromDayIndex(trainingDayEndIndex)
         print("Looping again time frame "+str(trainingStartTime) +" - " + str(trainingEndTime))
         symbolToDayData = {}
-        model = None
+        models = None
         dayCountBeforeModelRebuild = config.numberOfDaysBeforeRetrainingModel
         dayBeforeModelrebuildCounter = 0
         predictionDayStartDayIndex = trainingDayEndIndex + config.numberOfOutlookDays
@@ -1337,6 +1337,7 @@ def multipleModelAssessment(config:WeatherManPredictionConfig, models, symbolToD
                     modelPredictions['prediction'].append(selectedStock)
                     if(selectedStock['wrongProbability'] < modelPredictions['lowestProbability']):
                         modelPredictions['lowestProbability'] = selectedStock['wrongProbability']
+                        modelPredictions['lowestPrediction'] = selectedStock
         
     for symbol in symbolToPredictions:
         stockPredictions = symbolToPredictions[symbol]
@@ -1346,16 +1347,19 @@ def multipleModelAssessment(config:WeatherManPredictionConfig, models, symbolToD
         else:
             countToSymbolPredictions[predictionCount] = [stockPredictions]
 
+    totalCorrectlyPredicted = 0
+    totalOnesPredicted = 0
     countKeys = list(countToSymbolPredictions.keys())
     highCountKeys = sorted(countKeys, reverse=True)
     allPredictions = []
     for countKey in highCountKeys:
-        predictions = highCountKeys[countKey]
-        sortedPredictions = sorted(predictions, key=lambda prediction: prediction['wrongProbability'])
+        predictions = countToSymbolPredictions[countKey]
+        sortedPredictions = sorted(predictions, key=lambda prediction: prediction['lowestProbability'])
         allPredictions.extend(sortedPredictions)
 
     finalPredictions = allPredictions[:stockPerDay]
-    for selectedStock in finalPredictions:
+    for predictions in finalPredictions:
+        selectedStock = predictions['lowestPrediction']
         totalOnesPredicted += 1
         if selectedStock["result"] == 1:
             totalCorrectlyPredicted += 1
