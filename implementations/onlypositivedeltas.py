@@ -825,8 +825,18 @@ def pickStockFromProbabilities(predictionProbability, numberOfStockForProbabilit
     
     return retValue
    
+def getPredictions(config:WeatherManPredictionConfig, model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, printSomeThing = False):
+    reshaped = reshapeData(testData, testResults, featureLengthPerRetroDay)
+    testDataReshaped = reshaped['x']
 
+    prediction = model.predict(testDataReshaped, verbose=2)
+    prediction_probabilities = list(prediction)
 
+    prediction = model.predict_classes(testDataReshaped, verbose=2)
+    predictionArr = prediction.tolist()
+
+    retValue = processPredictions(predictionArr, prediction_probabilities, testData, testResults, indexToSymbol)
+    return retValue
 
 def assessPredictions(config:WeatherManPredictionConfig, model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, stockPerDay = 2, printSomeThing = False):
     reshaped = reshapeData(testData, testResults, featureLengthPerRetroDay)
@@ -944,8 +954,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
             metadata = testDatum["metaData"]
             predictionDayIndex = metadata['targetPredictionDayIndex']
             predictionProbability = predictionProbabilities[index]
-            symbolIndex = metadata["symbolIndex"]
-            stockSymbol = indexToSymbol[symbolIndex]
+            stockSymbol = metadata["symbolIndex"]
             prediction = predictions[index]
             testResult = testResults[index]
             if prediction == 1:
@@ -957,7 +966,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
                 predictionDict = {
                     "wrongProbability": predictionProbability[0],
                     "rightProbability": predictionProbability[1],
-                    "symbol": symbolIndex,
+                    "symbol": stockSymbol,
                     "result": testResult,
                     "predictionDay": str(timeFromDayIndex(predictionDayIndex)),
                     "predictionDayIndex": predictionDayIndex,
@@ -973,7 +982,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
                 predictionDict = {
                     "wrongProbability": predictionProbability[0],
                     "rightProbability": predictionProbability[1],
-                    "symbol": symbolIndex,
+                    "symbol": stockSymbol,
                     "result": testResult,
                     "predictionDay": str(timeFromDayIndex(predictionDayIndex)),
                     "predictionDayIndex": predictionDayIndex,
@@ -1155,7 +1164,8 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
         foundPredictionDay = False
         while dayBeforeModelrebuildCounter < dayCountBeforeModelRebuild and predictionDayStartDayIndex <= loopMaxIndex:
             if rebuildModel:
-                model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)['model']
+                modelResults = getModels(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+                models = [modelResult['model']  for modelResult in modelResults]
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays:
                 totalDayCounter+=1
@@ -1172,11 +1182,12 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                         else:
                             print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
                 
-                dataFormated = convertForTraining(symbolToDayData,0, True)
-                trainData = dataFormated['trainX']
-                trainResult = dataFormated['trainY']
-                featureDayLength = dataFormated['featureLengthPerRetroDay']
-                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
+                # dataFormated = convertForTraining(symbolToDayData,0, True)
+                # trainData = dataFormated['trainX']
+                # trainResult = dataFormated['trainY']
+                # featureDayLength = dataFormated['featureLengthPerRetroDay']
+                # modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
+                modelAssessment = multipleModelAssessment(config, models, symbolToDayData, dataIndexToSymbol, config.stockPerDay, True)
                 totalOnesPredicted =modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
                 numberOfPossiblePredictions +=1
@@ -1228,6 +1239,38 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     else:
         print("Nothing to buy")
 
+
+def getModels(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
+    models = []
+    modelRebuildCounter = 0
+    symbolToDayData = {}
+    numberOfDaysForTraining = config.numberOfDaysForTraining
+    symbolReadStart = datetime.datetime.now()
+    for symbol in allSymbolsToTickerData:
+        if symbol not in symbolToDayData:
+            tickerData = allSymbolsToTickerData[symbol]["symbolData"]
+            print("symbol is "+ str(symbol))
+            stockDataDayCount = len(tickerData)
+            
+            if stockDataDayCount > numberOfDaysForTraining:
+                outlookResult = getDayOutlook(config, tickerData, trainingStartTime, trainingEndTime, symbolIndex = symbol)
+                symbolToDayData[symbol] = outlookResult
+            else:
+                print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
+    
+    symbolReadEnd = datetime.datetime.now()
+
+    timeSpan = symbolReadEnd - symbolReadStart
+    print("symbol read took "+ str(timeSpan.total_seconds()) +"s")
+    while modelRebuildCounter < config.modelRebuildCount:
+        modelInfo = getModel(config, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+        if(modelInfo is not None):
+            models.append(modelInfo)
+        modelRebuildCounter += 1
+    
+    return models
+
+
 def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
     retValue = None
     models = []
@@ -1262,6 +1305,75 @@ def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, data
     
     return retValue
 
+
+def multipleModelAssessment(config:WeatherManPredictionConfig, models, symbolToDayData, dataIndexToSymbol, stockPerDay, printSomeThing = False):
+    
+    symbolToPredictions = {}
+    countToSymbolPredictions = {}
+    for model in models:
+        dataFormated = convertForTraining(symbolToDayData,0, True)
+        trainData = dataFormated['trainX']
+        trainResult = dataFormated['trainY']
+        featureDayLength = dataFormated['featureLengthPerRetroDay']
+        modelPredictions = getPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, printSomeThing)
+        
+
+        if 1 in modelPredictions:
+            marketUpPredictions = modelPredictions[1]
+            for predictionDayIndex in marketUpPredictions:
+                predictionDayStockPredictions = marketUpPredictions[predictionDayIndex]
+                selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions, stockPerDay=stockPerDay, threshold=config.threshold)
+                for selectedStock in selectedStocks:
+                    symbol = selectedStock["symbol"]
+                    if symbol in symbolToPredictions:
+                        modelPredictions = symbolToPredictions[symbol]
+                    else:
+                        modelPredictions = {
+                            'prediction': [],
+                            'lowestProbability': 2,
+                        }
+                        symbolToPredictions[symbol] = modelPredictions
+
+                    modelPredictions['prediction'].append(selectedStock)
+                    if(selectedStock['wrongProbability'] < modelPredictions['lowestProbability']):
+                        modelPredictions['lowestProbability'] = selectedStock['wrongProbability']
+        
+    for symbol in symbolToPredictions:
+        stockPredictions = symbolToPredictions[symbol]
+        predictionCount = len(stockPredictions['prediction'])
+        if predictionCount in countToSymbolPredictions:
+            countToSymbolPredictions[predictionCount].append(stockPredictions)
+        else:
+            countToSymbolPredictions[predictionCount] = [stockPredictions]
+
+    countKeys = list(countToSymbolPredictions.keys())
+    highCountKeys = sorted(countKeys, reverse=True)
+    allPredictions = []
+    for countKey in highCountKeys:
+        predictions = highCountKeys[countKey]
+        sortedPredictions = sorted(predictions, key=lambda prediction: prediction['wrongProbability'])
+        allPredictions.extend(sortedPredictions)
+
+    finalPredictions = allPredictions[:stockPerDay]
+    for selectedStock in finalPredictions:
+        totalOnesPredicted += 1
+        if selectedStock["result"] == 1:
+            totalCorrectlyPredicted += 1
+    
+    willBuyTHeFollowing = {}
+    if(printSomeThing or (totalOnesPredicted != totalCorrectlyPredicted)):
+        print("You should bid on the following stock")
+        print(str(willBuyTHeFollowing))
+        print("\n")
+    retValue = {
+        'correctPredictions': totalCorrectlyPredicted,
+        'totalOnesPredicted': totalOnesPredicted,
+        'toBeBoughtStocks': willBuyTHeFollowing
+    }
+
+    return retValue
+
+    
 
 def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
     
