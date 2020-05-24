@@ -17,7 +17,7 @@ PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
-from libfiles.loaddataseries import load_time_series_daily
+from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
 from .weathermanpredictionconfig import WeatherManPredictionConfig
 from weatherutility import dayIndexFromStart, timeFromDayIndex
 
@@ -225,7 +225,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbo
     highPrice = tickerData[day]["ticker"][2]
     lowPrice = tickerData[day]["ticker"][1]
     closePrice = tickerData[day]["ticker"][3]
-    refPrice = openPrice
+    refPrice = closePrice
 
 
     while retryCount > 0: #gets the earliest day before or equal to 'dayCountForFeatures' thats within tickerData
@@ -235,7 +235,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, symbo
         possibleRetroDay -= 1
         retryCount -= 1
     if foundEarliestDay:
-        while possibleRetroDay < dayOfPrediction:
+        while possibleRetroDay <= dayOfPrediction:
             if possibleRetroDay in tickerData:
                 featureDay = beginningOfTime + datetime.timedelta(days=(possibleRetroDay))
                 weekDay = featureDay.weekday()
@@ -1032,12 +1032,62 @@ def daysToDictionary(dayIndexes, mappings):
         retValue[dayIndex] = mappings[dayIndex]
     return retValue
 
+def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols):
+    retValue = {}
+    for symbol in tickerSymbols:
+        tickerData = load_pre_time_series(symbol)
+        if (tickerData):
+            retValue[symbol] = tickerData
+    return retValue
+
+
 def loadAllSymbolTickerDataIntoMemory(tickerSymbols):
     retValue = {}
     for symbol in tickerSymbols:
         tickerData = load_time_series_daily(symbol)
         retValue[symbol] = tickerData
     return retValue
+
+def getAllTrainingPiecesPreClosing(config:WeatherManPredictionConfig, tickerSymbols):
+    allSymbolsToTickerData = loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols)
+    bounds = {
+        "min":None,
+        "max":None,
+    }
+
+    dayIndexes = set()
+    dataIndexToSymbol = {}
+    symbolCounter = 0
+    for entry in allSymbolsToTickerData:
+        currentMin = bounds["min"]
+        currentMax = bounds["max"]
+        symbolInfo = allSymbolsToTickerData[entry]
+        stockDayIndexMin = symbolInfo["dayBounds"]["min"]
+        stockDayIndexMax = symbolInfo["dayBounds"]["max"]
+        symbolDayIndexes = symbolInfo["allDayIndexes"]
+        dataIndexToSymbol[entry] = symbolCounter
+        for dayIndex in symbolDayIndexes:
+            dayIndexes.add(dayIndex)
+
+
+        if currentMin is None or stockDayIndexMin < currentMin:
+            currentMin = stockDayIndexMin
+            bounds["min"] = currentMin
+
+        if currentMax is None or currentMax < stockDayIndexMax:
+            currentMax = stockDayIndexMax
+            bounds["max"] = currentMax
+        symbolCounter += 1
+    
+    retValue = {
+        "bounds": bounds,
+        "allSymbolsToTickerData": allSymbolsToTickerData,
+        "dataIndexToSymbol": dataIndexToSymbol,
+        "dayIndexes": dayIndexes
+    }
+
+    return retValue
+
 
 def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     allSymbolsToTickerData = loadAllSymbolTickerDataIntoMemory(tickerSymbols)
@@ -1316,6 +1366,7 @@ def getStocks(tickerSymbols, date=None):
     config = WeatherManPredictionConfig()
     config.epochCount = 200
     config.modelRebuildCount = 3
+    config.stockPerDay = 2
     currentTime = datetime.datetime.now()
     config.printMe()
     if date is None:
@@ -1358,6 +1409,54 @@ def getStocks(tickerSymbols, date=None):
         print ("Cannot predict stock because the time provided is not within")
 
 
+def getPreCloseStocks(tickerSymbols, date=None):
+    config = WeatherManPredictionConfig()
+    config.epochCount = 200
+    config.modelRebuildCount = 3
+    config.stockPerDay = 2
+    currentTime = datetime.datetime.now()
+    config.printMe()
+    if date is None:
+        date = currentTime
+    earliestTime = currentTime + datetime.timedelta(days=(-180))
+    finalTime = date #+ datetime.timedelta(days=())
+
+    print ("We are about to predict stocks to buy on "+str(finalTime))
+
+    parameters = getAllTrainingPiecesPreClosing(config, tickerSymbols)
+    allSymbolsToTickerData = parameters["allSymbolsToTickerData"]
+    dataIndexToSymbol = parameters["dataIndexToSymbol"]
+    allDayIndexes = parameters["dayIndexes"]
+
+    trainingStartTIme = earliestTime
+    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfOutlookDays))
+    model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
+    predictionStartTime = finalTime
+    retryCountLimit = 4
+    retryCount = 0
+    predictionDayIndex = dayIndexFromStart(predictionStartTime)
+
+    while predictionDayIndex not in allDayIndexes and retryCount < retryCountLimit:
+        predictionDayIndex -= 1
+        retryCount += 1
+    
+    if predictionDayIndex in allDayIndexes:
+        symbolToDayData = getStockSuggestionSymbolToData(config, allSymbolsToTickerData, predictionDayIndex)
+    
+        predictionData = convertTickerForPrediction(symbolToDayData)
+        stockData = predictionData['symbolData']
+        featureLengthPerRetroDay = predictionData['featureLengthPerRetroDay']
+        stockResult = predict(config, model, dataIndexToSymbol, stockData, featureLengthPerRetroDay)
+        if(len(stockResult) > 0):
+            print ("Done analyzing you should buy the stocks below:")
+            print(stockResult)
+        else: 
+            print ("\n\n\nSorry bro, no stock buying today")
+    else:
+        print ("Cannot predict stock because the time provided is not within")
+
+
+
 def runExec(tickerSymbols = None):
     config = WeatherManPredictionConfig()
     config.iterationNotes = '''Changed how inflection points of preceding day works.
@@ -1370,7 +1469,8 @@ def runExec(tickerSymbols = None):
      '''
     
     # getStocks(tickerSymbols)
-    # return
+    getPreCloseStocks(tickerSymbols)
+    return
     config.printMe()
     currentTime = datetime.datetime.now()
     

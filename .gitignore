@@ -1,6 +1,7 @@
 LibFiles/temp/*
 LibFiles/__pycache__/*
 TrainingData/StockDump/*
+EstimateTrainingData/*
 libfiles/temp/lastBatch.txt
 libfiles/temp/lastBatch.txt
 datafiles/*

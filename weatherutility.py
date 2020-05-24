@@ -17,3 +17,13 @@ def timeFromDayIndex(dayIndex):
     retValue = beginningOfTime + datetime.timedelta(days=(dayIndex))
 
     return retValue
+
+def msToTime(msTime):
+    retValue = datetime.datetime.now() + datetime.timedelta(milliseconds=msTime)
+    return retValue
+
+
+def timeToMs(dateTimeObj):
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    retValue = (dateTimeObj - epoch).total_seconds() * 1000.0
+    return retValue

@@ -1,21 +1,226 @@
 import os
 import json
 import datetime
+# from ..weatherutility import msToTime, timeToMs
 from .downloadstockdata import downloadStockBySymbol
+from .tickerSelector import polygonIo, alphaVantage, tingo
 
-def getStockFileNames(symbol, series_type):
+
+# closeKeyString = "4. close"
+# openKeyString = "1. open"
+# highKeyString = "2. high"
+# lowKeyString = "3. low"
+# volumeKeyString = "5. volume"
+
+currentStockTicker = tingo
+
+def getStockFileNames(symbol, series_type, folderPath = None):
     walk = os.walk;
     # series_type = "TIME_SERIES_DAILY";
     dirname = os.path.dirname(__file__)
     retValue = {};
-
-    fullFolderPath = "..\\TrainingData\\StockDump\\"+series_type+"\\"+symbol+"\\";
+    folderPath =  "..\\TrainingData\\StockDump\\" if folderPath is None else folderPath
+    fullFolderPath = folderPath+series_type+"\\"+symbol+"\\";
     pathFoFolder = dirname+"\\..\\TrainingData\\StockDump\\"+series_type+"\\"+symbol+"\\";
     fullFolderPath = pathFoFolder
     for (dirpath, dirnames, filenames) in walk(fullFolderPath):
         for fileName in filenames:
             fullFileName = fullFolderPath+fileName;
             retValue[fileName] = (fileName, fullFileName);
+    
+    return retValue
+
+
+def extrapolateClosingPrice(tickerDataPoints, extraPolateSpanInMs):
+    earliestTicker = None
+    latestTicker = None
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    
+    if len(tickerDataPoints) > 0:
+        for tickerInstance in tickerDataPoints:
+            tickerDateString = tickerInstance['date']
+            dateObject = datetime.datetime.strptime(tickerDateString, '%Y-%m-%dT%H:%M:%S.%fZ')
+            dateInMs = (dateObject - epoch).total_seconds() * 1000.0
+
+            if earliestTicker is None or earliestTicker['dateInMs'] > dateInMs:
+                earliestTicker = {
+                    'dateInMs': dateInMs,
+                    'tickerData': tickerInstance,
+                    'avg': ((tickerInstance['close'] + tickerInstance['open'])/2)
+                }
+            
+            if latestTicker is None or latestTicker['dateInMs'] < dateInMs:
+                latestTicker = {
+                    'dateInMs': dateInMs,
+                    'tickerData': tickerInstance,
+                    'avg': ((tickerInstance['close'] + tickerInstance['open'])/2)
+                }
+
+    if earliestTicker is not None and latestTicker is not None:
+        priceDelta = latestTicker['avg'] - earliestTicker['avg']
+        timeDelta = (latestTicker['dateInMs'] - earliestTicker['dateInMs'])
+        priceGradient = (priceDelta/timeDelta)
+        priceDelta = extraPolateSpanInMs * priceGradient
+        retValue = {
+            'priceDelta': priceDelta,
+        }
+
+        return retValue
+    else:
+        return None
+
+def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj):
+    closeKeyString = tingo.close
+    openKeyString = tingo.open
+    highKeyString = tingo.high
+    lowKeyString = tingo.low
+    volumeKeyString = tingo.volume
+
+    thirtyMinTimeSpan = 30 * 60
+
+    
+    lastThirtyMin = nowTimeObj - datetime.timedelta(seconds=thirtyMinTimeSpan)
+
+    lastThirtyMinSpanTicker = []
+
+    openPrice = None
+    closePrice = None
+    lowPrice = None
+    highPrice = None
+    volume = 0
+
+    
+    if len(intraDayObject) > 0:
+        firstTicker = intraDayObject[0]
+        lastTicker = intraDayObject[len(intraDayObject) - 1]
+        openPrice = float(firstTicker[openKeyString])
+        closePrice = float(lastTicker[closeKeyString])
+        for tickerInstance in intraDayObject:
+            lowestPriceIter = float(tickerInstance[lowKeyString])
+            highstPriceIter = float(tickerInstance[highKeyString])
+            dateTimeString = tickerInstance['date']
+            # volumeIter = float(tickerInstance[volumeKeyString])
+            # volume += volumeIter
+
+            if lowPrice is None or lowestPriceIter < lowPrice:
+                lowPrice = lowestPriceIter
+
+            if highPrice is None or highstPriceIter > highPrice:
+                highPrice = highstPriceIter
+        
+            timeObj = datetime.datetime.strptime(dateTimeString, "%Y-%m-%dT%H:%M:%S.%fZ")
+            timeObj = timeObj.replace(tzinfo=datetime.timezone.utc)
+
+            if(timeObj < nowTimeObj and timeObj > lastThirtyMin):
+                lastThirtyMinSpanTicker.append(tickerInstance)
+        retValue = {
+            "timeObj": timeObj,
+            "tickerData": {
+                closeKeyString+"":closePrice,
+                openKeyString+"":openPrice,
+                highKeyString+"":highPrice,
+                lowKeyString+"":lowPrice,
+                volumeKeyString+"": volume
+            },
+            'lastThirtyMinSpans': lastThirtyMinSpanTicker
+        }
+        
+        return retValue
+    else:
+        return None
+
+def load_pre_time_series(symbol,
+    downloadIfNotFound = True):
+
+    folderPath = '..\\EstimateTrainingData\\StockDump\\'
+    retValue = []
+    allNamesIntraDay = getStockFileNames(symbol, 'TIME_SERIES_INTRADAY', folderPath=folderPath)
+    allNamesSeriesDay = getStockFileNames(symbol, "TIME_SERIES_DAILY" , folderPath=folderPath)
+    latestSeriesDailyFileName = "";
+    jsonObj = "";
+
+    intraDayKeys = list(allNamesIntraDay.keys())
+    intraDayKeys.sort()
+
+    seriesDayKeys = list(allNamesSeriesDay.keys())
+    seriesDayKeys.sort()
+    retValue = None
+
+    if(len(intraDayKeys) > 0 and len(seriesDayKeys) > 0):
+        lastIntraDayKey = intraDayKeys[len(intraDayKeys) - 1]
+        lastSeriesDayKey = seriesDayKeys[len(seriesDayKeys) - 1]
+
+        if(len(allNamesIntraDay) > 0):
+            seriesDailyKeys = list(allNamesSeriesDay.keys())
+            seriesDailyKeys = sorted(allNamesSeriesDay, reverse=True)
+            seriesDayJsonFileName = None
+            for fileName in seriesDailyKeys:
+                namePathTuple = allNamesSeriesDay[fileName]
+                latestSeriesDailyFileName = namePathTuple[0];
+                seriesDayJsonFileName = namePathTuple[1];
+                break;
+
+            intraDayKeys = list(allNamesIntraDay.keys())
+            intraDayKeys = sorted(allNamesIntraDay, reverse=True)
+            for fileName in intraDayKeys:
+                namePathTuple = allNamesIntraDay[fileName]
+                intraDayFileName = namePathTuple[0];
+                intraDayJsonFileName = namePathTuple[1];
+                break;
+
+            #Read JSON data into the datastore variable
+            if latestSeriesDailyFileName:
+                with open(seriesDayJsonFileName, 'r') as f:
+                    datastore = json.load(f)
+                    seriesDailyJsonObj = datastore
+            
+            if seriesDailyJsonObj:
+                timeSeries = seriesDailyJsonObj
+                
+
+
+            if intraDayFileName:
+                with open(intraDayJsonFileName, 'r') as f:
+                    datastore = json.load(f)
+                    intraDayJsonObj = datastore
+            
+            if intraDayJsonObj:
+                intraDaySeries = intraDayJsonObj
+                now = datetime.datetime.now(datetime.timezone.utc)
+                marketClose = datetime.datetime(now.year, now.month, now.day, 21, 0, 0, tzinfo=datetime.timezone.utc)
+                intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now)
+                lastThirtyMinSpanTicker = intraDayTickerDataSummary['lastThirtyMinSpans']
+                if len(lastThirtyMinSpanTicker) > 0:
+                    timeDelta = marketClose - now
+                    extraPolateSpanInMs = (timeDelta.total_seconds() * 1000)
+                    extraPolation = extrapolateClosingPrice(lastThirtyMinSpanTicker, extraPolateSpanInMs)
+                    priceDelta = extraPolation['priceDelta']
+                    intraDayTickerData = intraDayTickerDataSummary['tickerData']
+                    openPrice = intraDayTickerData[currentStockTicker.open+""]
+                    closePrice = intraDayTickerData[currentStockTicker.close+""]+priceDelta
+                    highPriceSofar = intraDayTickerData[currentStockTicker.high+""]
+                    lowPriceSofar = intraDayTickerData[currentStockTicker.low+""]
+
+                    if closePrice > highPriceSofar:
+                        highPriceSofar = closePrice
+                    
+                    if closePrice < lowPriceSofar:
+                        lowPriceSofar = closePrice
+
+                    nowAsString = now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                    intraDayTickerDataEstimation = {
+                        'date': nowAsString,
+                        currentStockTicker.close+"":closePrice,
+                        currentStockTicker.open+"":openPrice,
+                        currentStockTicker.high+"":highPriceSofar,
+                        currentStockTicker.low+"":lowPriceSofar,
+                        currentStockTicker.volume+"":68732872876
+                    }
+                    timeSeries.append(intraDayTickerDataEstimation)
+                
+        timeSeriesTickerData = processTimeSeries_DayToStock(timeSeries)
+        retValue = timeSeriesTickerData
+        
     
     return retValue
 
@@ -50,7 +255,7 @@ def load_time_series_daily(
                 jsonObj = datastore
     
     if jsonObj:
-        timeSeries = jsonObj["Time Series (Daily)"];
+        timeSeries = jsonObj
         # timeSeriesTickerData = processTimeSeries(timeSeries);
         timeSeriesTickerData = processTimeSeries_DayToStock(timeSeries);
         retValue = timeSeriesTickerData;
@@ -68,10 +273,10 @@ def processTimeSeries (timeSeriesDict):
     for key in keys:
         timeData = timeSeriesDict[key]
         # print ("open is " + timeData["1. open"])
-        openPrice = float(timeData["1. open"]);
-        closePrice = float(timeData["4. close"]);
-        lowestPrice = float(timeData["3. low"]);
-        highstPrice = float(timeData["2. high"]);
+        openPrice = float(timeData[currentStockTicker.open]);
+        closePrice = float(timeData[currentStockTicker.close]);
+        lowestPrice = float(timeData[currentStockTicker.low]);
+        highstPrice = float(timeData[currentStockTicker.high]);
         tickerData.append(openPrice);
         tickerData.append(lowestPrice);
         tickerData.append(highstPrice);
@@ -84,6 +289,11 @@ def processTimeSeries_DayToStock(timeSeriesDict):
     function returns ticker data as a dictionary in which the key is number of days from 1970 Jan 1
     The value of the key is open, low, high, and close of the stock symbol. If it is tim series data this entry should be sorted by time
     '''
+    closeKeyString = currentStockTicker.close
+    openKeyString = currentStockTicker.open
+    highKeyString = currentStockTicker.high
+    lowKeyString = currentStockTicker.low
+    volumeKeyString = currentStockTicker.volume
     tickerKey = "ticker";
     beginningOfTime_str = "1970-01-01 00:00:00";
     beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
@@ -98,9 +308,9 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         "max":None,
     }
     for entry in timeSeriesDict:
-        timeStr = entry;
-        timeData = timeSeriesDict[entry];
-        time = datetime.datetime.strptime(timeStr, '%Y-%m-%d')
+        timeStr = entry['date']
+        timeData = entry
+        time = datetime.datetime.strptime(timeStr, '%Y-%m-%dT%H:%M:%S.%fZ')
         dayDiff = (time - beginningOfTime).days
         currentMin = bounds["min"]
         currentMax = bounds["max"]
@@ -122,11 +332,11 @@ def processTimeSeries_DayToStock(timeSeriesDict):
             symbolData[dayDiff] = {
                 ""+tickerKey+"": tickerData
             };
-        openPrice = float(timeData["1. open"]);
-        lowestPrice = float(timeData["3. low"]);
-        highstPrice = float(timeData["2. high"]);
-        closePrice = float(timeData["4. close"]);
-        volume = float(timeData["5. volume"]);
+        openPrice = float(timeData[openKeyString]);
+        lowestPrice = float(timeData[lowKeyString]);
+        highstPrice = float(timeData[highKeyString]);
+        closePrice = float(timeData[closeKeyString]);
+        volume = float(timeData[volumeKeyString]);
         avgPrice = (closePrice + openPrice)/2
         
         # DO NOT CHANGE THE APPEND ORDER 
