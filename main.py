@@ -23,15 +23,6 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-# now = datetime.datetime.now(datetime.timezone.utc)
-# eastern = pytz.timezone('America/New_York')
-# marketClose = datetime.datetime(now.year, now.month, now.day, 16, 0, 0, tzinfo=eastern)
-# # utc_dt = datetime(2009, 7, 10, 18, 44, 59, 193982, tzinfo=pytz.utc)
-# coloradoTz = marketClose.astimezone(get_localzone())
-# print('colorado '+ str(coloradoTz))
-# marketClose.to
-# groupSymbolRequest(downloadedSymbols);
-
 # generateModel(WeatherManPredictionConfig(), subSetOfTech[90:153], True);
 # loadLatestModel(WeatherManPredictionConfig(), True);
 # turnTheKey(WeatherManPredictionConfig(), subSetOfTech[90:153], True);

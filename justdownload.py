@@ -10,7 +10,8 @@ allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
 groupSymbolRequest(allTheSymbols
     # ,series_type=intraDaySeriesType
-    , dontDownloadIfExists = False)
+    , dontDownloadIfExists = False,
+    isMultiThreaded=True)
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)

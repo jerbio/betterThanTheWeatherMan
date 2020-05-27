@@ -3,7 +3,7 @@ import os
 import errno
 from datetime import datetime, timedelta
 import time
-from polygon import RESTClient
+import threading
 
 
 time_fmt = '%m-%d-%y %H:%M:%S'
@@ -104,16 +104,42 @@ def downloadStockBySymbol (
             sendDailyRequests(PARAMS, fullFolderPath)
         currentRequestCount = 1;
 
+
+class downloadStockThread (threading.Thread):
+   def __init__(self, threadID, name, symbol, series_type, filePath, dontDownloadIfExists):
+      threading.Thread.__init__(self)
+      self.threadID = threadID
+      self.name = name
+      self.symbol = symbol
+      self.series_type = series_type
+      self.filePath = filePath
+      self.dontDownloadIfExists = dontDownloadIfExists
+   def run(self):
+      print ("Starting " + self.name)
+      downloadStockBySymbol(self.symbol, self.series_type, self.filePath, self.dontDownloadIfExists)
+      print( "Exiting " + self.name)
     
     
 def groupSymbolRequest(
     symbols,
     series_type = "TIME_SERIES_DAILY",
     filePath = "",
-    dontDownloadIfExists = False
+    dontDownloadIfExists = False,
+    isMultiThreaded = False
     ):
-    for symbol in symbols:
-        downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
+    if not isMultiThreaded:
+        for symbol in symbols:
+            downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
+    else:
+        threadCounter = 0
+        threads = []
+        for symbol in symbols:
+            threadName = 'symbol - '+ str(threadCounter) + ' - ' + symbol
+            dowloadThread = downloadStockThread(threadCounter, threadName, symbol, series_type, filePath, dontDownloadIfExists)
+            dowloadThread.start()
+            threads.append(dowloadThread)
+            # downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
+            threadCounter+=1
 
 def sendIntraDayRequest(PARAMS, folderPath):
     dirname = os.path.dirname(__file__)
