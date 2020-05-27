@@ -4,7 +4,8 @@ import datetime
 # from ..weatherutility import msToTime, timeToMs
 from .downloadstockdata import downloadStockBySymbol
 from .tickerSelector import polygonIo, alphaVantage, tingo
-
+import pytz
+from tzlocal import get_localzone 
 
 # closeKeyString = "4. close"
 # openKeyString = "1. open"
@@ -21,7 +22,7 @@ def getStockFileNames(symbol, series_type, folderPath = None):
     retValue = {};
     folderPath =  "..\\TrainingData\\StockDump\\" if folderPath is None else folderPath
     fullFolderPath = folderPath+series_type+"\\"+symbol+"\\";
-    pathFoFolder = dirname+"\\..\\TrainingData\\StockDump\\"+series_type+"\\"+symbol+"\\";
+    pathFoFolder = dirname+"\\" + fullFolderPath
     fullFolderPath = pathFoFolder
     for (dirpath, dirnames, filenames) in walk(fullFolderPath):
         for fileName in filenames:
@@ -69,14 +70,14 @@ def extrapolateClosingPrice(tickerDataPoints, extraPolateSpanInMs):
     else:
         return None
 
-def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj):
+def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj, preecedingMinuteSpan = 15):
     closeKeyString = tingo.close
     openKeyString = tingo.open
     highKeyString = tingo.high
     lowKeyString = tingo.low
     volumeKeyString = tingo.volume
 
-    thirtyMinTimeSpan = 30 * 60
+    thirtyMinTimeSpan = preecedingMinuteSpan * 60
 
     
     lastThirtyMin = nowTimeObj - datetime.timedelta(seconds=thirtyMinTimeSpan)
@@ -110,6 +111,7 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj):
         
             timeObj = datetime.datetime.strptime(dateTimeString, "%Y-%m-%dT%H:%M:%S.%fZ")
             timeObj = timeObj.replace(tzinfo=datetime.timezone.utc)
+            coloradoTz = timeObj.astimezone(get_localzone())
 
             if(timeObj < nowTimeObj and timeObj > lastThirtyMin):
                 lastThirtyMinSpanTicker.append(tickerInstance)
@@ -130,7 +132,7 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj):
         return None
 
 def load_pre_time_series(symbol,
-    downloadIfNotFound = True):
+    downloadIfNotFound = True, precedingMinuteSpan = 15):
 
     folderPath = '..\\EstimateTrainingData\\StockDump\\'
     retValue = []
@@ -156,9 +158,9 @@ def load_pre_time_series(symbol,
             seriesDayJsonFileName = None
             for fileName in seriesDailyKeys:
                 namePathTuple = allNamesSeriesDay[fileName]
-                latestSeriesDailyFileName = namePathTuple[0];
-                seriesDayJsonFileName = namePathTuple[1];
-                break;
+                latestSeriesDailyFileName = namePathTuple[0]
+                seriesDayJsonFileName = namePathTuple[1]
+                break
 
             intraDayKeys = list(allNamesIntraDay.keys())
             intraDayKeys = sorted(allNamesIntraDay, reverse=True)
@@ -186,11 +188,15 @@ def load_pre_time_series(symbol,
             
             if intraDayJsonObj:
                 intraDaySeries = intraDayJsonObj
+                eastern = pytz.timezone('America/New_York')
                 now = datetime.datetime.now(datetime.timezone.utc)
-                marketClose = datetime.datetime(now.year, now.month, now.day, 21, 0, 0, tzinfo=datetime.timezone.utc)
-                intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now)
+                now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 45, 0))
+                # marketClose = datetime.datetime(now.year, now.month, now.day, 21, 0, 0, tzinfo=datetime.timezone)
+                
+                marketClose = eastern.localize(datetime.datetime(now.year, now.month, now.day, 16, 0, 0))
+                intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now, precedingMinuteSpan)
                 lastThirtyMinSpanTicker = intraDayTickerDataSummary['lastThirtyMinSpans']
-                if len(lastThirtyMinSpanTicker) > 0:
+                if len(lastThirtyMinSpanTicker) > 1:
                     timeDelta = marketClose - now
                     extraPolateSpanInMs = (timeDelta.total_seconds() * 1000)
                     extraPolation = extrapolateClosingPrice(lastThirtyMinSpanTicker, extraPolateSpanInMs)
@@ -210,12 +216,15 @@ def load_pre_time_series(symbol,
                     nowAsString = now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                     intraDayTickerDataEstimation = {
                         'date': nowAsString,
+                        'symbol': symbol,
                         currentStockTicker.close+"":closePrice,
                         currentStockTicker.open+"":openPrice,
                         currentStockTicker.high+"":highPriceSofar,
                         currentStockTicker.low+"":lowPriceSofar,
-                        currentStockTicker.volume+"":68732872876
+                        currentStockTicker.volume+"":68732872876,
+                        "isExtrapolated":True
                     }
+                    print (intraDayTickerDataEstimation);
                     timeSeries.append(intraDayTickerDataEstimation)
                 
         timeSeriesTickerData = processTimeSeries_DayToStock(timeSeries)

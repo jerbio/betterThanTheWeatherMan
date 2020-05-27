@@ -9,7 +9,7 @@ from polygon import RESTClient
 time_fmt = '%m-%d-%y %H:%M:%S'
 requestBatches = [];
 timeOfRequest = "temp/lastBatch.txt"
-requestPerMinute = 333
+requestPerMinute = 750
 currentRequestCount = 0
 oneMinuteInSeconds = 60
 
@@ -204,7 +204,7 @@ def sendDailyRequests(PARAMS, folderPath):
     
 
 
-def main():
+def main(symbol):
     # key = "_1_ortWykxsLQvPQk2eIV3jmfk5_3e5tuzq_AN"
     # client = RESTClient(key)
 
@@ -214,8 +214,8 @@ def main():
     headers = {
     'Content-Type': 'application/json'
     }
-    requestResponse = requests.get("https://api.tiingo.com/iex/GLUU/prices?startDate=2020-05-22&resampleFreq=5min&token=9d5ddc8e9e13f8b1d800c55a6bdeefb8ff10cd79", headers=headers)
-    # requestResponse = requests.get("https://api.tiingo.com/tiingo/daily/GLUU/prices?startDate=1970-01-01&token=9d5ddc8e9e13f8b1d800c55a6bdeefb8ff10cd79", headers=headers)
+    requestResponse = requests.get("https://api.tiingo.com/iex/"+symbol+"/prices?startDate=2020-05-22&resampleFreq=5min&token=9d5ddc8e9e13f8b1d800c55a6bdeefb8ff10cd79", headers=headers)
+    # requestResponse = requests.get("https://api.tiingo.com/tiingo/daily/"+symbol+"/prices?startDate=1970-01-01&token=9d5ddc8e9e13f8b1d800c55a6bdeefb8ff10cd79", headers=headers)
     print(requestResponse.json())
 
-# main()
+main('TOTAU')

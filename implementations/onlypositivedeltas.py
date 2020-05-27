@@ -754,10 +754,12 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
 
     numberOfEpochs = config.epochCount
     learningRate = 0.001
-    optimizer = tf.compat.v1.train.AdamOptimizer(
-        learning_rate=learningRate, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False,
-        name='Adam'
-    )
+    # optimizer = tf.compat.v1.train.AdamOptimizer(
+    #     learning_rate=learningRate, beta1=0.9, beta2=0.999, epsilon=1e-08, use_locking=False,
+    #     name='Adam'
+    # )
+
+    optimizer = tf.keras.optimizers.Adam(lr=learningRate,  beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 
     model.compile(optimizer=optimizer,
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -1032,10 +1034,10 @@ def daysToDictionary(dayIndexes, mappings):
         retValue[dayIndex] = mappings[dayIndex]
     return retValue
 
-def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols):
+def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan = 15):
     retValue = {}
     for symbol in tickerSymbols:
-        tickerData = load_pre_time_series(symbol)
+        tickerData = load_pre_time_series(symbol, precedingMinuteSpan)
         if (tickerData):
             retValue[symbol] = tickerData
     return retValue
@@ -1049,7 +1051,8 @@ def loadAllSymbolTickerDataIntoMemory(tickerSymbols):
     return retValue
 
 def getAllTrainingPiecesPreClosing(config:WeatherManPredictionConfig, tickerSymbols):
-    allSymbolsToTickerData = loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols)
+    
+    allSymbolsToTickerData = loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, config.preClosingMinuteSpan)
     bounds = {
         "min":None,
         "max":None,
@@ -1469,8 +1472,8 @@ def runExec(tickerSymbols = None):
      '''
     
     # getStocks(tickerSymbols)
-    getPreCloseStocks(tickerSymbols)
-    return
+    # getPreCloseStocks(tickerSymbols)
+    # return
     config.printMe()
     currentTime = datetime.datetime.now()
     
