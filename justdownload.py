@@ -8,10 +8,26 @@ allTheSymbols.extend(maxSymbols)
 allTheSymbols.extend(subSetOfTech)
 allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
-groupSymbolRequest(allTheSymbols
+
+
+
+
+
+
+def downloadIntraDay(isMultiThreaded=False, dontDownloadIfExists = True):
+    groupSymbolRequest(allTheSymbols
+    ,series_type=intraDaySeriesType
+    , dontDownloadIfExists = dontDownloadIfExists,
+    isMultiThreaded=isMultiThreaded)
+
+def downloadDaily(isMultiThreaded=False, dontDownloadIfExists = True):
+    groupSymbolRequest(allTheSymbols
     # ,series_type=intraDaySeriesType
-    , dontDownloadIfExists = False,
-    isMultiThreaded=True)
+    , dontDownloadIfExists = dontDownloadIfExists,
+    isMultiThreaded=isMultiThreaded)
+
+
+# downloadDaily(True, False)
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)

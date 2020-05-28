@@ -36,9 +36,10 @@ def extrapolateClosingPrice(tickerDataPoints, extraPolateSpanInMs):
     earliestTicker = None
     latestTicker = None
     epoch = datetime.datetime.utcfromtimestamp(0)
+    orderedTickerDataPoints = sorted(tickerDataPoints, key=lambda entry: entry['date'])[:2]
     
-    if len(tickerDataPoints) > 0:
-        for tickerInstance in tickerDataPoints:
+    if len(orderedTickerDataPoints) > 0:
+        for tickerInstance in orderedTickerDataPoints:
             tickerDateString = tickerInstance['date']
             dateObject = datetime.datetime.strptime(tickerDateString, '%Y-%m-%dT%H:%M:%S.%fZ')
             dateInMs = (dateObject - epoch).total_seconds() * 1000.0
@@ -58,12 +59,13 @@ def extrapolateClosingPrice(tickerDataPoints, extraPolateSpanInMs):
                 }
 
     if earliestTicker is not None and latestTicker is not None:
-        priceDelta = latestTicker['avg'] - earliestTicker['avg']
+        gradientBias = 0.95 # this is because of trying to add some inherent bias. Looks like towards the last 5 minutes gradients soften bbecause of less volume in general
+        priceDelta = (latestTicker['avg'] - earliestTicker['avg']) * gradientBias
         timeDelta = (latestTicker['dateInMs'] - earliestTicker['dateInMs'])
         priceGradient = (priceDelta/timeDelta)
-        priceDelta = extraPolateSpanInMs * priceGradient
+        extraPolatedPriceDelta = extraPolateSpanInMs * priceGradient
         retValue = {
-            'priceDelta': priceDelta,
+            'priceDelta': extraPolatedPriceDelta,
         }
 
         return retValue
@@ -96,7 +98,9 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj, preecedingMinuteSpan
         lastTicker = intraDayObject[len(intraDayObject) - 1]
         openPrice = float(firstTicker[openKeyString])
         closePrice = float(lastTicker[closeKeyString])
-        for tickerInstance in intraDayObject:
+        reversedIntraDayObject = list(intraDayObject)
+        reversedIntraDayObject.reverse()
+        for tickerInstance in reversedIntraDayObject:
             lowestPriceIter = float(tickerInstance[lowKeyString])
             highstPriceIter = float(tickerInstance[highKeyString])
             dateTimeString = tickerInstance['date']
@@ -111,7 +115,10 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj, preecedingMinuteSpan
         
             timeObj = datetime.datetime.strptime(dateTimeString, "%Y-%m-%dT%H:%M:%S.%fZ")
             timeObj = timeObj.replace(tzinfo=datetime.timezone.utc)
-            coloradoTz = timeObj.astimezone(get_localzone())
+
+            eastern = pytz.timezone('America/New_York')
+            # eastern_timeObj = eastern.localize(timeObj)
+            eastern_timeObj = timeObj.astimezone(eastern)
 
             if(timeObj < nowTimeObj and timeObj > lastThirtyMin):
                 lastThirtyMinSpanTicker.append(tickerInstance)
@@ -189,8 +196,9 @@ def load_pre_time_series(symbol,
             if intraDayJsonObj:
                 intraDaySeries = intraDayJsonObj
                 eastern = pytz.timezone('America/New_York')
-                now = datetime.datetime.now(datetime.timezone.utc)
-                now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 45, 0))
+                now = datetime.datetime.now(eastern)
+                # now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 55, 0))
+                # now = eastern.localize(now)
                 # marketClose = datetime.datetime(now.year, now.month, now.day, 21, 0, 0, tzinfo=datetime.timezone)
                 
                 marketClose = eastern.localize(datetime.datetime(now.year, now.month, now.day, 16, 0, 0))

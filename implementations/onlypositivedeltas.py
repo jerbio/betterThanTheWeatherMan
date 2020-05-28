@@ -17,6 +17,9 @@ PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+
 from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
 from .weathermanpredictionconfig import WeatherManPredictionConfig
 from weatherutility import dayIndexFromStart, timeFromDayIndex
@@ -1037,7 +1040,7 @@ def daysToDictionary(dayIndexes, mappings):
 def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan = 15):
     retValue = {}
     for symbol in tickerSymbols:
-        tickerData = load_pre_time_series(symbol, precedingMinuteSpan)
+        tickerData = load_pre_time_series(symbol, precedingMinuteSpan=precedingMinuteSpan)
         if (tickerData):
             retValue[symbol] = tickerData
     return retValue
@@ -1472,12 +1475,12 @@ def runExec(tickerSymbols = None):
      '''
     
     # getStocks(tickerSymbols)
-    # getPreCloseStocks(tickerSymbols)
+    # # getPreCloseStocks(tickerSymbols)
     # return
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-165))
+    earliestTime = currentTime + datetime.timedelta(days=(-180))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))

@@ -9,7 +9,7 @@ import threading
 time_fmt = '%m-%d-%y %H:%M:%S'
 requestBatches = [];
 timeOfRequest = "temp/lastBatch.txt"
-requestPerMinute = 750
+requestPerMinute = 20000
 currentRequestCount = 0
 oneMinuteInSeconds = 60
 
@@ -140,6 +140,8 @@ def groupSymbolRequest(
             threads.append(dowloadThread)
             # downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
             threadCounter+=1
+            if (threadCounter)% 20 == 19:
+                time.sleep(3)
 
 def sendIntraDayRequest(PARAMS, folderPath):
     dirname = os.path.dirname(__file__)

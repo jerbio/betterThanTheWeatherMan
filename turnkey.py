@@ -3,6 +3,7 @@ import os
 import errno
 import json
 import tensorflow as tf
+import numpy
 
 
 
@@ -17,6 +18,10 @@ class SetEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, set):
             return list(obj)
+        if isinstance(obj, float):
+            return str(obj)
+        if isinstance(obj, numpy.float32):
+            return str(obj)
         return json.JSONEncoder.default(self, obj)
 
 def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
@@ -48,6 +53,26 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
         if(len(stockResult) > 0):
             print ("Done analyzing you should buy the stocks below:")
             print(stockResult)
+            currentTime = datetime.datetime.now()
+            timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')
+            predictionFolderPath = config.predictionFolder
+            if isAuto:
+                predictionFolderPath = config.predictionFolderTurnedKey
+            predictionFolderPath += '\\prediction_'+ timeString +''
+
+            predictionFileName = 'prediction.json'
+            predictionFileNamePath = predictionFolderPath+'\\'+predictionFileName
+
+            if not os.path.exists(os.path.dirname(predictionFileNamePath)):
+                try:
+                    os.makedirs(os.path.dirname(predictionFileNamePath))
+                except OSError as exc: # Guard against race condition
+                    if exc.errno != errno.EEXIST:
+                        raise
+
+            with open(predictionFileNamePath, 'w') as outfile:
+                json.dump(stockResult, outfile, cls=SetEncoder, indent=4)
+
         else: 
             print ("\n\n\nSorry bro, no stock buying today")
     else:
@@ -90,7 +115,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
 
     
 
-    print ("We are about to predict stocks to buy on "+str(finalTime))
+    print ("We are about to generate a model on "+str(finalTime))
 
     parameters = getAllTrainingPieces(config, tickerSymbols)
     allSymbolsToTickerData = parameters["allSymbolsToTickerData"]

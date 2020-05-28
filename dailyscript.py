@@ -53,7 +53,10 @@ beforeDownloadTime = datetime.datetime.now()
 groupSymbolRequest(allTheSymbols,
     filePath='..\\EstimateTrainingData\\StockDump\\'
     ,series_type=intraDaySeriesType
-    , dontDownloadIfExists = False)
+    , dontDownloadIfExists = False,
+    isMultiThreaded=True)
+
+    
 
 afterDownloadTime = datetime.datetime.now()
 
