@@ -794,7 +794,8 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
         )
     return retValue
 
-def pickStockFromProbabilities(predictionProbability, numberOfStockForProbability = 5, stockPerDay = 2, probabilityRetryCount = 1000, threshold = 0.95):
+def pickStockFromProbabilities(predictionProbability, stockPerDay = 2, probabilityRetryCount = 1000, threshold = 0.95):
+    numberOfStockForProbability = stockPerDay + 3
     orderedByBestProbability = sorted(predictionProbability, key=lambda Probabs: (Probabs["wrongProbability"]))
     bestFiveStocks = orderedByBestProbability[:numberOfStockForProbability]
     minThresholdStocks = [stockData for stockData in bestFiveStocks if stockData["rightProbability"] > threshold ]

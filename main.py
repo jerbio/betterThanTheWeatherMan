@@ -23,10 +23,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-# generateModel(WeatherManPredictionConfig(), subSetOfTech[90:153], True);
-# loadLatestModel(WeatherManPredictionConfig(), True);
-# turnTheKey(WeatherManPredictionConfig(), subSetOfTech[90:153], True);
-print("\n\n\nUsing subSetOfTech dataset"); runExec(subSetOfTech); print("\n\n\nUsing subSetOfTech dataset"+str(datetime.datetime.now()))
-# print("\n\n\nUsing SubsetOfFinance dataset"); runExec(SubsetOfFinance); print("\n\n\nUsing SubsetOfFinance dataset"+str(datetime.datetime.now()))
+# print("\n\n\nUsing subSetOfTech dataset"); runExec(subSetOfTech); print("\n\n\nUsing subSetOfTech dataset"+str(datetime.datetime.now()))
+print("\n\n\nUsing SubsetOfFinance dataset"); runExec(SubsetOfFinance[120:144]); print("\n\n\nUsing SubsetOfFinance dataset"+str(datetime.datetime.now()))
 # print("\n\n\nUsing downloadedSymbols dataset"); runExec(maxSymbols[:50]); print("\n\n\nUsing downloadedSymbols dataset"+str(datetime.datetime.now()))
 # # runExec(["AAPL"])

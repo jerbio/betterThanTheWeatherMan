@@ -99,7 +99,7 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj, preecedingMinuteSpan
         openPrice = float(firstTicker[openKeyString])
         closePrice = float(lastTicker[closeKeyString])
         reversedIntraDayObject = list(intraDayObject)
-        reversedIntraDayObject.reverse()
+        reversedIntraDayObject.reverse() # reverse for ease of troubleshooting. THe latest times are the most relevant
         for tickerInstance in reversedIntraDayObject:
             lowestPriceIter = float(tickerInstance[lowKeyString])
             highstPriceIter = float(tickerInstance[highKeyString])
@@ -198,8 +198,6 @@ def load_pre_time_series(symbol,
                 eastern = pytz.timezone('America/New_York')
                 now = datetime.datetime.now(eastern)
                 # now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 55, 0))
-                # now = eastern.localize(now)
-                # marketClose = datetime.datetime(now.year, now.month, now.day, 21, 0, 0, tzinfo=datetime.timezone)
                 
                 marketClose = eastern.localize(datetime.datetime(now.year, now.month, now.day, 16, 0, 0))
                 intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now, precedingMinuteSpan)
