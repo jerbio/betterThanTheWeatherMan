@@ -3,7 +3,7 @@ import tensorflow as tf
 
 class WeatherManPredictionConfig:
     def __init__(self): 
-        self.epochCount = 100
+        self.epochCount = 200
         self.daysPerYear = 365
         self.percentageDeltaChange = 3
         self.testRatio = 0.3
@@ -19,6 +19,11 @@ class WeatherManPredictionConfig:
         self.threshold = 0.95
         self.dropout = 0.0
         self.previousDayDeltaCutoff = -2
+        self.modelFolderPath = '.\\savedmodels'
+        self.modelFolderPathTurnedKey = self.modelFolderPath + '\\lightningStrikes'
+        self.predictionFolder = '.\\predictionDump'
+        self.predictionFolderTurnedKey = self.predictionFolder + '\\lightningStrikes'
+        self.preClosingMinuteSpan = 15 # The number of minutes from 'now' that'll be used to exrapolate the closing price. Assuming the curent time is currently 2:30p and this property is set to 15 min this till select ticker data between 2:15p and 2:30p to extrapolate the closing price
 
     def printMe(self):
         retValue =f'''
@@ -38,6 +43,11 @@ class WeatherManPredictionConfig:
         threshold = {self.threshold}
         iterationNotes: {self.iterationNotes}
         previousDayDeltaCutoff: {self.previousDayDeltaCutoff}
+        preClosingMinuteSpan: {self.preClosingMinuteSpan}
+        modelFolderPath: {self.modelFolderPath}
+        modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey}
+        predictionFolder: {self.predictionFolder}
+        predictionFolderTurnedKey: {self.predictionFolderTurnedKey}
         '''
         print(retValue)
 

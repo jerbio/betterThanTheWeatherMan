@@ -1,8 +1,10 @@
 LibFiles/temp/*
 LibFiles/__pycache__/*
 TrainingData/StockDump/*
+EstimateTrainingData/*
 libfiles/temp/lastBatch.txt
-libfiles/temp/lastBatch.txt
+savedmodels/*
+predictionDump/*
 datafiles/*
 *__pycache__
 .vscode

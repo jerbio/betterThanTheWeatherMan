@@ -1,0 +1,1 @@
+"python.exe" "C:\Users\jerom\Documents\workspace\python\betterthantheweatherman\dailybots\builddailymodel.py"
