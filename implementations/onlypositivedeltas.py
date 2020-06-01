@@ -1426,15 +1426,15 @@ def multipleModelAssessment(config:WeatherManPredictionConfig, models, symbolToD
         if selectedStock["result"] == 1:
             totalCorrectlyPredicted += 1
     
-    willBuyTHeFollowing = {}
+    
     if(printSomeThing or (totalOnesPredicted != totalCorrectlyPredicted)):
         print("You should bid on the following stock")
-        print(str(willBuyTHeFollowing))
+        print(str(finalPredictions))
         print("\n")
     retValue = {
         'correctPredictions': totalCorrectlyPredicted,
         'totalOnesPredicted': totalOnesPredicted,
-        'toBeBoughtStocks': willBuyTHeFollowing
+        'toBeBoughtStocks': finalPredictions
     }
 
     return retValue
@@ -1590,10 +1590,7 @@ def runExec(tickerSymbols = None):
     config.iterationNotes = '''Changed how inflection points of preceding day works.
         added inflection points and fixed logincal errors
         retryLimit = dayCount + 2 
-        subSetOfTech[51:102]
-        retValue = [lowestInflextionPointsFeatures,
-                 highestInflextionPointFeatures
-                 ]
+        SubsetOfFinance
      '''
     
     # getStocks(tickerSymbols)
