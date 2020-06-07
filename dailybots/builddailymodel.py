@@ -19,4 +19,6 @@ sleepSeconds = minuteSleep * 60
 time.sleep(sleepSeconds)
 config = WeatherManPredictionConfig()
 config.modelRebuildCount = 5
+config.numberOfOutlookDays = 7
+config.percentageDeltaChange = 3
 generateModel(config, subSetOfTech[90:153], True)

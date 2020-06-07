@@ -36,7 +36,7 @@ def extrapolateClosingPrice(tickerDataPoints, extraPolateSpanInMs):
     earliestTicker = None
     latestTicker = None
     epoch = datetime.datetime.utcfromtimestamp(0)
-    orderedTickerDataPoints = sorted(tickerDataPoints, key=lambda entry: entry['date'])[:2]
+    orderedTickerDataPoints = sorted(tickerDataPoints, key=lambda entry: entry['date'])[len(tickerDataPoints) - 2 :len(tickerDataPoints)]
     
     if len(orderedTickerDataPoints) > 0:
         for tickerInstance in orderedTickerDataPoints:
@@ -196,8 +196,11 @@ def load_pre_time_series(symbol,
             if intraDayJsonObj:
                 intraDaySeries = intraDayJsonObj
                 eastern = pytz.timezone('America/New_York')
-                now = datetime.datetime.now(eastern)
-                # now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 55, 0))
+                now = datetime.datetime.now()
+                minute = now.minute
+                if minute < 44:
+                    minute = 55
+                now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, minute, 0))
                 
                 marketClose = eastern.localize(datetime.datetime(now.year, now.month, now.day, 16, 0, 0))
                 intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now, precedingMinuteSpan)
@@ -364,7 +367,19 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         
     # symbolData["allDayIndexes"] = allDayIndexes
     # symbolData["dayBounds"] = bounds
+    dayIndexList = list(allDayIndexes)
+    dayIndexList.sort()
+    dayIndexToListIndex = {}
+    indexCounter = 0
+    for dayIndex in dayIndexList:
+        dayIndexToListIndex[dayIndex] = indexCounter
+        indexCounter+=1
     retValue["symbolData"] = symbolData
     retValue["dayBounds"] = bounds
     retValue["allDayIndexes"] = allDayIndexes
+    retValue["formatedIndexes"] = {
+        'dayIndexToListIndex': dayIndexToListIndex,
+        'orderedDayIndex': dayIndexList,
+        'allDayIndexes': allDayIndexes
+    }
     return retValue;
