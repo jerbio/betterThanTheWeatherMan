@@ -197,7 +197,10 @@ def load_pre_time_series(symbol,
                 intraDaySeries = intraDayJsonObj
                 eastern = pytz.timezone('America/New_York')
                 now = datetime.datetime.now()
-                now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, 55, 0))
+                minute = now.minute
+                if minute < 44:
+                    minute = 55
+                now = eastern.localize(datetime.datetime(now.year, now.month, now.day, 15, minute, 0))
                 
                 marketClose = eastern.localize(datetime.datetime(now.year, now.month, now.day, 16, 0, 0))
                 intraDayTickerDataSummary = getTimeSeriesFromIntraDaily(intraDaySeries, now, precedingMinuteSpan)

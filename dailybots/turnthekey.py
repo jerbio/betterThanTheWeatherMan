@@ -17,6 +17,6 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 config = WeatherManPredictionConfig()
-config.stockPerDay = 2
+config.stockPerDay = 3
 config.preClosingMinuteSpan = 20
 turnTheKey(config, subSetOfTech[90:153], True)

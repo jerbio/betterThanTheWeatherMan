@@ -436,6 +436,8 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
             beginDayIndexRange = dayIndexToListIndex[dayOfPrediction] + 1
             endDayIndexRange = beginDayIndexRange + dayCount
             dayIndexRange = orderedDayIndex[beginDayIndexRange: endDayIndexRange]
+            dayIndexCounter = 0
+            firstIndexOfPercentageDeltaCross = None
             for dayIndex in dayIndexRange:
                 activeDayCounter += 1
                 dayData = tickerData[dayIndex]
@@ -472,9 +474,13 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                     maxNegative = percentOpen
                 if percentLow < maxNegative:
                     maxNegative = percentLow
+                
+                if(firstIndexOfPercentageDeltaCross == None and maxPositive > config.percentageDeltaChange):
+                    firstIndexOfPercentageDeltaCross = dayIndexCounter
 
                 ignoreDay = False
-                nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay, percentLow, dayIndex])
+                nextDaySeriesChanges.append([percentOpen, percentHigh, dayDiff, weekDay, percentLow, dayIndex, dayIndexCounter])
+                dayIndexCounter+=1
 
             if not ignoreDay:
                 retroDayData = getRetroDayTrainingData(config, tickerData, dayIndexData, symbolIndex, dayOfPrediction)
@@ -497,7 +503,8 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                         "precedingDays": precedingNintyDays,
                         "featureLengthPerRetroDay": featureLen,
                         "symbolIndex": symbolIndex,
-                        "tickerFeaturesPerDay": tickerFeaturesPerDay
+                        "tickerFeaturesPerDay": tickerFeaturesPerDay,
+                        "firstIndexOfPercentageDeltaCross": firstIndexOfPercentageDeltaCross
                     }
         currentDayIndex += 1
     return retValue
@@ -1199,6 +1206,9 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     numberOfActivePredictions = 0
     sumOfPredictionSuccessRatio = 0
     eachdayAssessment = {}
+    dayIndexOfDetection = []
+    dayIndexDistribution = {}
+    modelProcess = None
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
         trainingEndTime = timeFromDayIndex(trainingDayEndIndex)
@@ -1213,8 +1223,10 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
         rebuildModel = True
         foundPredictionDay = False
         while dayBeforeModelrebuildCounter < dayCountBeforeModelRebuild and predictionDayStartDayIndex <= loopMaxIndex:
+            config.printMe()
             if rebuildModel:
-                model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)['model']
+                modelProcess = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+                model = modelProcess['model']
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays:
                 totalDayCounter+=1
@@ -1237,9 +1249,23 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 trainResult = dataFormated['trainY']
                 featureDayLength = dataFormated['featureLengthPerRetroDay']
                 modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
-                totalOnesPredicted =modelAssessment['totalOnesPredicted']
+                totalOnesPredicted = modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
+                toBeBoughtStocks = modelAssessment['toBeBoughtStocks']
                 numberOfPossiblePredictions +=1
+
+                
+                for bidOption in toBeBoughtStocks:
+                    if bidOption['result'] == bidOption['prediction'] and bidOption['result'] == 1:
+                        resultSymbol = bidOption['symbol']
+                        resultDayIndex = bidOption['predictionDayIndex']
+                        daySymbolData = symbolToDayData[resultSymbol][resultDayIndex]
+                        firstIndexOfPercentageDeltaCross = daySymbolData['firstIndexOfPercentageDeltaCross']
+                        if firstIndexOfPercentageDeltaCross not in dayIndexDistribution:
+                            dayIndexDistribution[firstIndexOfPercentageDeltaCross] = 0
+                        
+                        dayIndexDistribution[firstIndexOfPercentageDeltaCross] += 1
+                        
                 
                 totalOnesPrediction += totalOnesPredicted
                 totalCorrectOnesPrediction += correctPredictions
@@ -1252,7 +1278,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                     else:
                         eachdayAssessment[predictionDayStartDayIndex] = predictionsResults
                     predictionsResults.append(modelAssessment)
-                    dayFinalAccuracyRatio = (correctPredictions/totalOnesPredicted )
+                    dayFinalAccuracyRatio = (correctPredictions/totalOnesPredicted)
                     sumOfPredictionSuccessRatio+=dayFinalAccuracyRatio
                     dayFinalAccuracy =  dayFinalAccuracyRatio * 100
                     print("Bidding accuracy for Day "+str(predictionDayStartTime)+" is "+str(dayFinalAccuracy))
@@ -1261,6 +1287,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                     soFarAccuracy = (totalCorrectOnesPrediction/totalOnesPrediction ) * 100
                     print("Total accuracy sofar "+str(soFarAccuracy))
                 print("processed "+str(totalDayCounter)+" days "+str(predictionDayStartTime))
+
                 alreadyPredictedDays.add(predictionDayStartDayIndex)
                 dayBeforeModelrebuildCounter+=1
             foundPredictionDay = True
@@ -1277,7 +1304,20 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     
     print("EACH DAY ASSESSMENT")
     print(eachdayAssessment)
-    config.printMe()
+
+    print("Day index distribution")
+    if totalCorrectOnesPrediction != 0:
+        indexNumeratorSum = 0
+        indexToPercentage = {}
+        for index in dayIndexDistribution:
+            indexNumeratorSum += (index * dayIndexDistribution[index])
+            indexSuccessRatio = dayIndexDistribution[index]/totalCorrectOnesPrediction
+            indexToPercentage[index] = indexSuccessRatio
+            indexRatioPct = indexSuccessRatio * 100
+            print("Index "+str(index) + " has ratio " + str(indexRatioPct))
+        averageDayIndex = indexNumeratorSum/totalCorrectOnesPrediction
+        print("Average Day Index "+str(averageDayIndex))
+                
 
     print("Complete time frame is "+str(timeFromDayIndex(trainingDayStartIndex))+" to "+str(timeFromDayIndex(trainingDayEndIndex)))
     if totalOnesPrediction != 0:
@@ -1476,9 +1516,6 @@ def getPreCloseStocks(tickerSymbols, date=None):
 def runExec(tickerSymbols = None):
     config = WeatherManPredictionConfig()
     config.iterationNotes = '''Changed how inflection points of preceding day works.
-        added inflection points and fixed logincal errors
-        retryLimit = dayCount + 2 
-        subSetOfTech[51:102]
         retValue = [lowestInflextionPointsFeatures,
                  highestInflextionPointFeatures
                  ]
@@ -1487,10 +1524,15 @@ def runExec(tickerSymbols = None):
     # getStocks(tickerSymbols)
     # # getPreCloseStocks(tickerSymbols)
     # return
+
+    config.percentageDeltaChange = 3
+    config.numberOfOutlookDays = 7
+    config.modelRebuildCount = 1
+    config.stockPerDay = 2
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-180))
+    earliestTime = currentTime + datetime.timedelta(days=(-720))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
