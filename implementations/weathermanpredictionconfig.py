@@ -19,6 +19,7 @@ class WeatherManPredictionConfig:
         self.threshold = 0.95
         self.dropout = 0.0
         self.previousDayDeltaCutoff = -2
+        self.modelVoteCount = 3 # Number of models to be created and used to vote for the config
         self.modelFolderPath = '.\\savedmodels'
         self.modelFolderPathTurnedKey = self.modelFolderPath + '\\lightningStrikes'
         self.predictionFolder = '.\\predictionDump'
@@ -34,6 +35,7 @@ class WeatherManPredictionConfig:
         numberOfTrainingWindowDays: {self.numberOfTrainingWindowDays}
         numberOfOutlookDays: {self.numberOfOutlookDays}
         modelRebuildCount: {self.modelRebuildCount}
+        modelVoteCount: {self.modelVoteCount}
         numberOfDaysBeforeRetrainingModel: {self.numberOfDaysBeforeRetrainingModel}
         numberOfRetroDays: {self.numberOfRetroDays}
         earliestTimeInYearsFromToday: {self.earliestTimeInYearsFromToday}

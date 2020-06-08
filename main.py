@@ -23,7 +23,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-# print("\n\n\nUsing subSetOfTech dataset"); runExec(subSetOfTech); print("\n\n\nUsing subSetOfTech dataset"+str(datetime.datetime.now()))
+# print("\n\n\nUsing subSetOfTech dataset[90:]"); runExec(subSetOfTech[90:]); print("\n\n\nUsing subSetOfTech[90:] dataset"+str(datetime.datetime.now()))
 print("\n\n\nUsing SubsetOfFinance SubsetOfFinance[0:72] "); runExec(SubsetOfFinance[0:72]); print("\n\n\nUsing SubsetOfFinance SubsetOfFinance[0:72] "+str(datetime.datetime.now()))
 # print("\n\n\nUsing SubsetOfFinance dataset"); runExec(SubsetOfFinance); print("\n\n\nUsing SubsetOfFinance dataset"+str(datetime.datetime.now()))
 # print("\n\n\nUsing downloadedSymbols dataset"); runExec(maxSymbols[:50]); print("\n\n\nUsing downloadedSymbols dataset"+str(datetime.datetime.now()))

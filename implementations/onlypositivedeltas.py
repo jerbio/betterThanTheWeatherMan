@@ -1236,7 +1236,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
             if rebuildModel:
                 modelResults = []
                 bestModelCounter = 0
-                while bestModelCounter < config.modelRebuildCount:
+                while bestModelCounter < config.modelVoteCount:
                     bestModel = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
                     modelResults.append(bestModel)
                     bestModelCounter+=1
@@ -1272,7 +1272,8 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 numberOfPossiblePredictions +=1
 
                 
-                for bidOption in toBeBoughtStocks:
+                for allPredictions in toBeBoughtStocks:
+                    bidOption = allPredictions['prediction'][0]
                     if bidOption['result'] == bidOption['prediction'] and bidOption['result'] == 1:
                         resultSymbol = bidOption['symbol']
                         resultDayIndex = bidOption['predictionDayIndex']
@@ -1637,16 +1638,15 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
 def runExec(tickerSymbols = None):
     config = WeatherManPredictionConfig()
-    config.iterationNotes = '''Changed how inflection points of preceding day works.
-        added inflection points and fixed logincal errors
-        retryLimit = dayCount + 2 
-        SubsetOfFinance
+    config.iterationNotes = '''Using multiNodeVotes
+
      '''
     
     # getStocks(tickerSymbols)
     # # getPreCloseStocks(tickerSymbols)
     # return
 
+    config.epochCount = 200
     config.percentageDeltaChange = 3
     config.numberOfOutlookDays = 7
     config.modelRebuildCount = 1
