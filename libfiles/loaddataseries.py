@@ -144,7 +144,7 @@ def load_pre_time_series(symbol,
     folderPath = '..\\EstimateTrainingData\\StockDump\\'
     retValue = []
     allNamesIntraDay = getStockFileNames(symbol, 'TIME_SERIES_INTRADAY', folderPath=folderPath)
-    allNamesSeriesDay = getStockFileNames(symbol, "TIME_SERIES_DAILY" , folderPath=folderPath)
+    allNamesSeriesDay = getStockFileNames(symbol, "TIME_SERIES_DAILY")
     latestSeriesDailyFileName = "";
     jsonObj = "";
 
