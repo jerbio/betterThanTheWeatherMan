@@ -1158,6 +1158,18 @@ def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     #         retryCount -= 1
 
 
+def getBestOfRollers(rollingTwenties):
+    retValue = None
+    bestAccuracy = None
+    for modelObj in rollingTwenties:
+        accuracy = modelObj['test_acc']
+        if bestAccuracy is None or bestAccuracy < accuracy:
+            retValue = modelObj
+            bestAccuracy = modelObj['test_acc']
+    
+    return retValue
+
+
 def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig):
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
@@ -1208,6 +1220,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     eachdayAssessment = {}
     dayIndexOfDetection = []
     dayIndexDistribution = {}
+    rollingTwenties = []
     modelProcess = None
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
@@ -1226,7 +1239,10 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
             config.printMe()
             if rebuildModel:
                 modelProcess = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
-                model = modelProcess['model']
+                rollingTwenties.append(modelProcess)
+                if(len(rollingTwenties) > config.rollingWindow):
+                    rollingTwenties.pop(0)
+                model = getBestOfRollers(rollingTwenties)['model']
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays:
                 totalDayCounter+=1

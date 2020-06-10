@@ -18,6 +18,7 @@ class WeatherManPredictionConfig:
         self.iterationNotes = ""
         self.threshold = 0.95
         self.dropout = 0.0
+        self.rollingWindow = 25
         self.previousDayDeltaCutoff = -2
         self.modelFolderPath = '.\\savedmodels'
         self.modelFolderPathTurnedKey = self.modelFolderPath + '\\lightningStrikes'
@@ -48,6 +49,7 @@ class WeatherManPredictionConfig:
         modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey}
         predictionFolder: {self.predictionFolder}
         predictionFolderTurnedKey: {self.predictionFolderTurnedKey}
+        rollingWindow: {self.rollingWindow}
         '''
         print(retValue)
 
