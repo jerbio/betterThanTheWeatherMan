@@ -23,8 +23,8 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-print("\n\n\nUsing penny stocks"); runExec(nasdaqPennys); print("\n\n\nUsing penny stocks"+str(datetime.datetime.now()))
-# print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"); runExec(subSetOfTech[90:]); print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"+str(datetime.datetime.now()))
+# print("\n\n\nUsing penny stocks"); runExec(nasdaqPennys); print("\n\n\nUsing penny stocks"+str(datetime.datetime.now()))
+print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"); runExec(subSetOfTech[:52]); print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"+str(datetime.datetime.now()))
 # print("\n\n\nUsing SubsetOfFinance dataset SubsetOfFinance[0:72]"); runExec(SubsetOfFinance[0:72]); print("\n\n\nUsing SubsetOfFinance[0:72] dataset "+str(datetime.datetime.now()))
 # print("\n\n\nUsing downloadedSymbols dataset"); runExec(maxSymbols[:50]); print("\n\n\nUsing downloadedSymbols dataset"+str(datetime.datetime.now()))
 # # runExec(["AAPL"])

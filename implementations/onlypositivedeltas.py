@@ -1544,11 +1544,12 @@ def runExec(tickerSymbols = None):
     config.percentageDeltaChange = 3
     config.numberOfOutlookDays = 7
     config.modelRebuildCount = 1
-    config.stockPerDay = 2
+    config.stockPerDay = 3
+    config.rollingWindow = 12
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-720))
+    earliestTime = currentTime + datetime.timedelta(days=(-400))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))

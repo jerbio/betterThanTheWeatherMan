@@ -41,6 +41,7 @@ class WeatherManPredictionConfig:
         numberOfDaysForTraining: {self.numberOfDaysForTraining}
         stockPerDay: {self.stockPerDay}
         dropout = {self.dropout}
+        rollingWindow: {self.rollingWindow}
         threshold = {self.threshold}
         iterationNotes: {self.iterationNotes}
         previousDayDeltaCutoff: {self.previousDayDeltaCutoff}
@@ -49,7 +50,6 @@ class WeatherManPredictionConfig:
         modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey}
         predictionFolder: {self.predictionFolder}
         predictionFolderTurnedKey: {self.predictionFolderTurnedKey}
-        rollingWindow: {self.rollingWindow}
         '''
         print(retValue)
 
