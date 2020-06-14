@@ -14,14 +14,19 @@ allTheSymbols = list(set(allTheSymbols))
 
 
 
-def downloadIntraDay(isMultiThreaded=False, dontDownloadIfExists = True):
+def downloadIntraDay(isMultiThreaded=False, dontDownloadIfExists = True, symbols = None):
+    if symbols is None:
+        symbols = allTheSymbols
     groupSymbolRequest(allTheSymbols
     ,series_type=intraDaySeriesType
     , dontDownloadIfExists = dontDownloadIfExists,
     isMultiThreaded=isMultiThreaded)
 
-def downloadDaily(isMultiThreaded=False, dontDownloadIfExists = True):
-    groupSymbolRequest(allTheSymbols
+def downloadDaily(isMultiThreaded=False, dontDownloadIfExists = True, symbols = None):
+    if symbols is None:
+        symbols = allTheSymbols
+
+    groupSymbolRequest(symbols
     # ,series_type=intraDaySeriesType
     , dontDownloadIfExists = dontDownloadIfExists,
     isMultiThreaded=isMultiThreaded)

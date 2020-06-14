@@ -1166,6 +1166,18 @@ def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
     retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
     return retValue
 
+
+def getBestOfRollers(rollingTwenties):
+    retValue = None
+    bestAccuracy = None
+    for modelObj in rollingTwenties:
+        accuracy = modelObj['test_acc']
+        if bestAccuracy is None or bestAccuracy < accuracy:
+            retValue = modelObj
+            bestAccuracy = modelObj['test_acc']
+    
+    return retValue
+
 def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig):
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
@@ -1217,6 +1229,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     eachdayAssessment = {}
     dayIndexOfDetection = []
     dayIndexDistribution = {}
+    rollingTwenties = []
     modelProcess = None
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
@@ -1245,9 +1258,15 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
             for symbolAndPrice in sortedSymbolDataByPrice:
                 windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
 
+            
+                model = modelProcess['model']
+            config.printMe()
             if rebuildModel and len(stockDataWithinWindow) > 0:
                 modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
-                model = modelProcess['model']
+                rollingTwenties.append(modelProcess)
+                if(len(rollingTwenties) > config.rollingWindow):
+                    rollingTwenties.pop(0)
+                model = getBestOfRollers(rollingTwenties)['model']
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays and len(stockDataWithinWindow) > 0:
                 totalDayCounter+=1
@@ -1552,6 +1571,7 @@ def runExec(tickerSymbols = None):
     config.percentageDeltaChange = 3
     config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
+
     config.stockPerDay = 2
     config.rollingWindow = 12
     config.printMe()

@@ -84,7 +84,7 @@ class WeathermanTimelineSimulator:
                 
             else:
                 multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))) )))
-                dayDelta = self.dayDistribution['dayCount']
+                dayDelta = self.dayDistribution['dayCount'] + 1
                 updatedDayIndexData = self.incrementDayIndex(currentDayIndex, dayDelta)
                 executionDayIndex = updatedDayIndexData
         except:
