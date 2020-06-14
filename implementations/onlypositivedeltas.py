@@ -1257,9 +1257,6 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
             windowSymbolData = {}
             for symbolAndPrice in sortedSymbolDataByPrice:
                 windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
-
-            
-                model = modelProcess['model']
             config.printMe()
             if rebuildModel and len(stockDataWithinWindow) > 0:
                 modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
