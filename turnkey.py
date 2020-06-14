@@ -123,7 +123,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
     allDayIndexes = parameters["dayIndexes"]
 
     trainingStartTIme = earliestTime
-    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfOutlookDays))
+    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
     model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     predictionDayIndex = dayIndexFromStart(predictionStartTime)

@@ -370,7 +370,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
 
     return retValue
 
-def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, earliestDay = None, latestDay = None, symbolIndex = 0):
+def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, earliestDay = None, latestDay = None, symbolIndex = 0, dayCount = None):
     '''
     function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
     X is provided with the arg 'dayCount'. These day points have to be within tickerData.
@@ -382,7 +382,8 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
     retValue = {
     }
 
-    dayCount = config.numberOfOutlookDays
+    if dayCount is None:
+        dayCount = config.numberOfDaysWithPossibleResult
     tickerFeaturesPerDay = -1
     trainingDays = set()
     earliestDayInt = 0
@@ -425,10 +426,6 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
             allRetroDayIndexes = set()
             notIncludedDays = set()
             notIncludedDays.add(day)
-            # nextDayIndex = getNextDayIndex(day, tickerData)
-            # if nextDayIndex is not None:
-            #     notIncludedDays.add(nextDayIndex)
-            retryLimit = dayCount + 2 #we assume 2 days for weekend + the occasional 2days for back to back holidays and 1 for the logic dayIndex != day which ignores the current prediction day
 
 
             dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
@@ -496,6 +493,7 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                         "day": day,
                         "percentageLimit": str(deltaLimit) + "%",
                         "maxDelta": maxDelta,
+                        "refPrice": refPrice,
                         "retroDays": allRetroDayIndexes,
                         "trainingDays": trainingDays,
                         "nextDaySeriesChanges": nextDaySeriesChanges,
@@ -803,24 +801,26 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
         )
     return retValue
 
-def pickStockFromProbabilities(predictionProbability, stockPerDay = 2, probabilityRetryCount = 1000, threshold = 0.95):
+def pickStockFromProbabilities(predictionProbability, allSymbolsToTickerData = None, stockPerDay = 2, probabilityRetryCount = 1000, threshold = 0.95):
     numberOfStockForProbability = stockPerDay + 3
+    if numberOfStockForProbability % 2 == 0:
+        numberOfStockForProbability += 1
     orderedByBestProbability = sorted(predictionProbability, key=lambda Probabs: (Probabs["wrongProbability"]))
     bestFiveStocks = orderedByBestProbability[:numberOfStockForProbability]
-    minThresholdStocks = [stockData for stockData in bestFiveStocks if stockData["rightProbability"] > threshold ]
+    crossThresholdStocks = [stockData for stockData in bestFiveStocks if stockData["rightProbability"] > threshold]
     
     retValue = []
-    if len(minThresholdStocks) > 1:
+    if len(crossThresholdStocks) > 1:
         poulatedByRandomness = []
         listGenCounter = 0
-        while listGenCounter < len(minThresholdStocks):
+        while listGenCounter < len(crossThresholdStocks):
             poulatedByRandomness.append({
                 "counter": 0,
                 "index": listGenCounter
             })
             listGenCounter+=1
 
-        indexLimit = len(minThresholdStocks) - 1
+        indexLimit = len(crossThresholdStocks) - 1
         
         retryCounter = 0
         while retryCounter < probabilityRetryCount:
@@ -830,20 +830,20 @@ def pickStockFromProbabilities(predictionProbability, stockPerDay = 2, probabili
 
         sortedRandomIndex = sorted(poulatedByRandomness, key=lambda entry: entry["counter"], reverse=True)
         selectedRandomIndexes = sortedRandomIndex[:stockPerDay]
-        retValue = [minThresholdStocks[stockIndex['index']] for stockIndex in selectedRandomIndexes]
+        retValue = [crossThresholdStocks[stockIndex['index']] for stockIndex in selectedRandomIndexes]
 
     else:
-        if len(minThresholdStocks) == 0:
+        if len(crossThresholdStocks) == 0:
             return retValue
         else:
-            retValue.append(minThresholdStocks[0])
+            retValue.append(crossThresholdStocks[0])
     
     return retValue
    
 
 
 
-def assessPredictions(config:WeatherManPredictionConfig, model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, stockPerDay = 2, printSomeThing = False):
+def assessPredictions(config:WeatherManPredictionConfig, model, testData, testResults, featureLengthPerRetroDay, indexToSymbol, allSymbolsToTickerData = None, stockPerDay = 2, printSomeThing = False):
     reshaped = reshapeData(testData, testResults, featureLengthPerRetroDay)
     testDataReshaped = reshaped['x']
 
@@ -868,17 +868,21 @@ def assessPredictions(config:WeatherManPredictionConfig, model, testData, testRe
             predictionDayStockPredictions = marketUpPredictions[predictionDayIndex]
             # for predictionDayIndex in predictionDayStockPredictions:
             # allStockPredictions = predictionDayStockPredictions[predictionDayIndex]
-            selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions, stockPerDay=stockPerDay, threshold=config.threshold)
+            selectedStocks = pickStockFromProbabilities(predictionDayStockPredictions, allSymbolsToTickerData, stockPerDay=stockPerDay, threshold=config.threshold)
             willBuyTHeFollowing.extend(selectedStocks)
             for selectedStock in selectedStocks:
                 totalOnesPredicted += 1
                 if selectedStock["result"] == 1:
                     totalCorrectlyPredicted += 1
     
-    if(printSomeThing or (totalOnesPredicted != totalCorrectlyPredicted)):
+    if len(willBuyTHeFollowing) > 0:
         print("You should bid on the following stock")
         print(str(willBuyTHeFollowing))
         print("\n")
+    else:
+        print("Mo bidding today")
+        print("\n")
+
     retValue = {
         'correctPredictions': totalCorrectlyPredicted,
         'totalOnesPredicted': totalOnesPredicted,
@@ -1006,7 +1010,7 @@ def processPredictions(predictions, predictionProbabilities, testData, testResul
         
 
 
-def predict(config:WeatherManPredictionConfig, model, indexToSymbol, testData, featureLengthPerRetroDay):
+def predict(config:WeatherManPredictionConfig, model, indexToSymbol, testData, featureLengthPerRetroDay, allSymbolsToTickerData = None):
     reshaped = reshapeData(testData, None, featureLengthPerRetroDay)
     testDataReshaped = reshaped['x']
 
@@ -1036,7 +1040,7 @@ def predict(config:WeatherManPredictionConfig, model, indexToSymbol, testData, f
         predictionResultMapping[predictionResult].append(predictionDict)
 
     onePredictions = predictionResultMapping[1]
-    retValue = pickStockFromProbabilities(onePredictions, stockPerDay=config.stockPerDay, threshold=config.threshold)
+    retValue = pickStockFromProbabilities(onePredictions, allSymbolsToTickerData, stockPerDay=config.stockPerDay, threshold=config.threshold)
     return retValue
     
 
@@ -1158,12 +1162,17 @@ def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     #         retryCount -= 1
 
 
+def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
+    retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
+    return retValue
+
 def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig):
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
-    entryDayStartIndex = dayIndexFromStart(boundStartTime)
+    numberOfDaysForTraining = config.numberOfDaysForTraining
+    entryDayStartIndex = dayIndexFromStart(boundStartTime) - numberOfDaysForTraining
     entryDayEndIndex = dayIndexFromStart(boundEndTime)
-    outlookDayLimit = config.numberOfOutlookDays
+    outlookDayLimit = config.numberOfDaysWithPossibleResult
     
     parameters = getAllTrainingPieces(config, tickerSymbols)
 
@@ -1192,7 +1201,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     if  entryDayStartIndex > loopMinIndex:
         loopMinIndex = entryDayStartIndex
 
-    numberOfDaysForTraining = config.numberOfDaysForTraining
+    
     trainingDayStartIndex = loopMinIndex
     trainingDayEndIndex = trainingDayStartIndex + numberOfDaysForTraining
     totalCorrectOnesPrediction = 0
@@ -1217,26 +1226,38 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
         model = None
         dayCountBeforeModelRebuild = config.numberOfDaysBeforeRetrainingModel
         dayBeforeModelrebuildCounter = 0
-        predictionDayStartDayIndex = trainingDayEndIndex + config.numberOfOutlookDays
+        predictionDayStartDayIndex = trainingDayEndIndex + config.numberOfDaysWithPossibleResult
         predictionDayEndDayIndex = predictionDayStartDayIndex+1
         predictionDayCounter = 0
         rebuildModel = True
         foundPredictionDay = False
+        config.printMe()
         while dayBeforeModelrebuildCounter < dayCountBeforeModelRebuild and predictionDayStartDayIndex <= loopMaxIndex:
-            config.printMe()
-            if rebuildModel:
-                modelProcess = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+            stockDataWithinWindow = []
+            for symbol in allSymbolsToTickerData:
+                # print(allSymbolsToTickerData[symbol]['symbolData'].keys())
+                if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
+                    stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
+
+            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1])[:50]
+
+            windowSymbolData = {}
+            for symbolAndPrice in sortedSymbolDataByPrice:
+                windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
+
+            if rebuildModel and len(stockDataWithinWindow) > 0:
+                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
                 model = modelProcess['model']
                 rebuildModel = False
-            if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays:
+            if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays and len(stockDataWithinWindow) > 0:
                 totalDayCounter+=1
                 symbolToDayData = {}
                 predictionDayStartTime = timeFromDayIndex(predictionDayStartDayIndex)
                 predictionDayEndTime = timeFromDayIndex(predictionDayEndDayIndex)
-                for symbol in allSymbolsToTickerData:
+                for symbol in windowSymbolData:
                     if symbol not in symbolToDayData:
-                        tickerData = allSymbolsToTickerData[symbol]["symbolData"]
-                        dayIndexData = allSymbolsToTickerData[symbol]["formatedIndexes"]
+                        tickerData = windowSymbolData[symbol]["symbolData"]
+                        dayIndexData = windowSymbolData[symbol]["formatedIndexes"]
                         stockDataDayCount = len(tickerData)
                         if stockDataDayCount > numberOfDaysForTraining:
                             outlookResult = getDayOutlook(config, tickerData, dayIndexData, predictionDayStartTime, predictionDayEndTime, symbolIndex = symbol)
@@ -1244,11 +1265,14 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                         else:
                             print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
                 
+
+                
+
                 dataFormated = convertForTraining(symbolToDayData,0, True)
                 trainData = dataFormated['trainX']
                 trainResult = dataFormated['trainY']
                 featureDayLength = dataFormated['featureLengthPerRetroDay']
-                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, config.stockPerDay)
+                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, windowSymbolData, config.stockPerDay)
                 totalOnesPredicted = modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
                 toBeBoughtStocks = modelAssessment['toBeBoughtStocks']
@@ -1438,7 +1462,7 @@ def getStocks(tickerSymbols, date=None):
     allDayIndexes = parameters["dayIndexes"]
 
     trainingStartTIme = earliestTime
-    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfOutlookDays))
+    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
     model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     retryCountLimit = 4
@@ -1455,7 +1479,7 @@ def getStocks(tickerSymbols, date=None):
         predictionData = convertTickerForPrediction(symbolToDayData)
         stockData = predictionData['symbolData']
         featureLengthPerRetroDay = predictionData['featureLengthPerRetroDay']
-        stockResult = predict(config, model, dataIndexToSymbol, stockData, featureLengthPerRetroDay)
+        stockResult = predict(config, model, dataIndexToSymbol, stockData, featureLengthPerRetroDay, allSymbolsToTickerData)
         if(len(stockResult) > 0):
             print ("Done analyzing you should buy the stocks below:")
             print(stockResult)
@@ -1485,7 +1509,7 @@ def getPreCloseStocks(tickerSymbols, date=None):
     allDayIndexes = parameters["dayIndexes"]
 
     trainingStartTIme = earliestTime
-    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfOutlookDays))
+    trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
     model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     retryCountLimit = 4
@@ -1502,7 +1526,7 @@ def getPreCloseStocks(tickerSymbols, date=None):
         predictionData = convertTickerForPrediction(symbolToDayData)
         stockData = predictionData['symbolData']
         featureLengthPerRetroDay = predictionData['featureLengthPerRetroDay']
-        stockResult = predict(config, model, dataIndexToSymbol, stockData, featureLengthPerRetroDay)
+        stockResult = predict(config, model, dataIndexToSymbol, stockData, featureLengthPerRetroDay, allSymbolsToTickerData)
         if(len(stockResult) > 0):
             print ("Done analyzing you should buy the stocks below:")
             print(stockResult)
@@ -1526,13 +1550,14 @@ def runExec(tickerSymbols = None):
     # return
 
     config.percentageDeltaChange = 3
-    config.numberOfOutlookDays = 7
+    config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
     config.stockPerDay = 2
+    config.rollingWindow = 12
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-720))
+    earliestTime = currentTime + datetime.timedelta(days=(-1000))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
@@ -1542,113 +1567,3 @@ def runExec(tickerSymbols = None):
     timeSpan = confidenceAnalysisEnd - confidenceAnalysisStart
     print("confidence analysis took "+ str(timeSpan.total_seconds()) +"s")
     config.printMe()
-
-# def runExec(tickerSymbols = None):
-#     defaultSymbol = "MMM"
-#     config = WeatherManPredictionConfig()
-#     currentTime = datetime.datetime.now()
-#     years = 0.3
-#     daysPerYear = 365
-#     totalDays = years * daysPerYear
-#     earliestTime = currentTime + datetime.timedelta(days=(-totalDays))
-#     finalTime = currentTime + datetime.timedelta(days=(-4))
-#     if not tickerSymbols:
-#         tickerSymbols = [defaultSymbol]
-#     dataIndexToSymbol = {}
-#     symbolToDayData = {}
-#     symbolCounter = 0
-#     for symbol in tickerSymbols:
-#         if symbol not in symbolToDayData:
-#             tickerData = load_time_series_daily(symbol)
-#             print("symbol is "+ str(symbol))
-#             stockDataDayCount = len(tickerData)
-#             if stockDataDayCount > totalDays:
-#                 outlookResult = getDayOutlook(config, tickerData, earliestTime, finalTime, symbolIndex = symbolCounter)
-#                 symbolToDayData[symbol] = outlookResult
-#                 dataIndexToSymbol[symbolCounter] = symbol
-#                 symbolCounter += 1
-#             else:
-#                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(totalDays)+"\nStock Days is :"+str(stockDataDayCount))
-
-#     if len(symbolToDayData) > 0:
-#         trainResult = []
-#         trainData = []
-#         allTestResult = []
-#         allTestData = []
-#         multiTestDayData = []
-#         multiTestDayResult = []
-
-
-#         futureDayCount = config.numberOfDaysBeforeRetrainingModel
-#         symbolFeatureLengthPerRetroDay = -3
-#         symbolKeys = symbolToDayData.keys()
-
-        
-
-#         print("using the time frame "+str(earliestTime)+ " - "+str(finalTime))
-#         print("Predicting "+str(futureDayCount)+ " days into the future")
-
-#         for key in symbolKeys:
-#             trainingDays = None
-#             for value in symbolToDayData[key].values():
-#                 trainingDays = value["trainingDays"]
-#                 break
-#             allTestPerSymbol = []
-#             allResultPerSymbol = []
-#             if trainingDays is not None:
-#                 orderedTraingDays = sorted(trainingDays)
-#                 trainDataDays = orderedTraingDays[:len(orderedTraingDays) - futureDayCount]
-#                 testDataDays = orderedTraingDays[(len(orderedTraingDays) - futureDayCount):]
-#                 trainSymbolToDayData = {
-#                     ""+key+"": daysToDictionary(trainDataDays, symbolToDayData[key])
-#                 }
-                
-#                 testSymbolToDayData = {
-#                     ""+key+"": daysToDictionary(testDataDays, symbolToDayData[key])
-#                 }
-
-                
-#                 dataFormated = convertForTraining(trainSymbolToDayData, 0)
-#                 trainResult.extend( dataFormated['trainY'])
-#                 trainData.extend(dataFormated['trainX'])
-#                 allTestResult.extend(dataFormated['testY'])
-#                 allTestData.extend(dataFormated['testX'])
-
-#                 allResultPerSymbol.extend(dataFormated['testY'])
-#                 allTestPerSymbol.extend(dataFormated['testX'])
-
-#                 dataFormated = convertForTraining(testSymbolToDayData, 1, True)
-#                 trainResult.extend( dataFormated['trainY'])
-#                 trainData.extend(dataFormated['trainX'])
-#                 allTestResult.extend(dataFormated['testY'])
-#                 allTestData.extend(dataFormated['testX'])
-
-#                 allResultPerSymbol.extend(dataFormated['testY'])
-#                 allTestPerSymbol.extend(dataFormated['testX'])
-
-#                 featureDayLength = dataFormated['featureLengthPerRetroDay']
-#                 symbolFeatureLengthPerRetroDay = featureDayLength
-                
-#             multiTestDayData.append(allTestPerSymbol)
-#             multiTestDayResult.append(allResultPerSymbol)
-
-        
-#         (model, test_loss, test_acc) = buildPredictionModel(config, trainData, trainResult, allTestData, allTestResult, symbolFeatureLengthPerRetroDay, (allTestData, allTestResult), dataIndexToSymbol)
-        
-#         for index in range(len(multiTestDayData)):
-#             testDataIter = multiTestDayData[index]
-#             testResultIter = multiTestDayResult[index]
-#             if(len(testDataIter) > 0):
-#                 modelAssessment = assessPredictions(model, testDataIter, testResultIter, symbolFeatureLengthPerRetroDay, dataIndexToSymbol)
-#                 print("using the time frame "+str(earliestTime)+ " - "+str(finalTime))
-#                 print("Predicting "+str(futureDayCount)+ " days into the future")
-#                 totalOnesPredicted =modelAssessment['totalOnesPredicted']
-#                 correctPredictions = modelAssessment['correctPredictions']
-#                 if totalOnesPredicted != 0:
-#                     finalAccuracy = (correctPredictions/totalOnesPredicted ) * 100
-#                     print("Bidding accuracy is "+str(finalAccuracy))
-#                 else:
-#                     print("Nothing to buy")
-#     else:
-#         print("Could not find data to process")
-
