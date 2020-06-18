@@ -4,6 +4,7 @@ TrainingData/StockDump/*
 EstimateTrainingData/*
 libfiles/temp/lastBatch.txt
 savedmodels/*
+logs/*
 predictionDump/*
 datafiles/*
 *__pycache__
