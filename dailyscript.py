@@ -3,6 +3,7 @@ from libfiles.idealpricedsymbols import maxSymbols, subSetOfTech, SubsetOfFinanc
 from libfiles.downloadstockdata import groupSymbolRequest
 import os
 import datetime
+from pathlib import Path
 
 intraDaySeriesType = 'TIME_SERIES_INTRADAY'
 allTheSymbols = []
@@ -12,7 +13,7 @@ allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
 
 # groupSymbolRequest(allTheSymbols,
-#     filePath='..\\EstimateTrainingData\\StockDump\\'
+#     filePath='../EstimateTrainingData/StockDump/'
 #     , dontDownloadIfExists = False)
 
 
@@ -22,7 +23,7 @@ beforeDownloadTime = datetime.datetime.now()
 
 
 groupSymbolRequest(allTheSymbols,
-    filePath='..\\EstimateTrainingData\\StockDump\\'
+    filePath = str(Path('../EstimateTrainingData/StockDump/')
     ,series_type=intraDaySeriesType
     , dontDownloadIfExists = False,
     isMultiThreaded=True)

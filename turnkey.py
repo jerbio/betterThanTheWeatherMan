@@ -4,7 +4,7 @@ import errno
 import json
 import tensorflow as tf
 import numpy
-
+from pathlib import Path
 
 
 from weatherutility import dayIndexFromStart, timeFromDayIndex
@@ -58,10 +58,10 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
             predictionFolderPath = config.predictionFolder
             if isAuto:
                 predictionFolderPath = config.predictionFolderTurnedKey
-            predictionFolderPath += '\\prediction_'+ timeString +''
+            predictionFolderPath += '/prediction_'+ timeString +''
 
             predictionFileName = 'prediction.json'
-            predictionFileNamePath = predictionFolderPath+'\\'+predictionFileName
+            predictionFileNamePath = str(Path(predictionFolderPath+'/'+predictionFileName))
 
             if not os.path.exists(os.path.dirname(predictionFileNamePath)):
                 try:
@@ -87,7 +87,7 @@ def loadLatestModel(config:WeatherManPredictionConfig, isAuto = False):
     walk = os.walk;
     for (dirpath, dirnames, fileNames) in walk(modelFolder):
         for folderPath in dirnames:
-            fullFolderName = modelFolder+folderPath;
+            fullFolderName = modelFolder+'/'+folderPath;
             folderPaths[folderPath] = (folderPath, fullFolderName);
         break;
     
@@ -97,7 +97,7 @@ def loadLatestModel(config:WeatherManPredictionConfig, isAuto = False):
     latestFolderName = modelFolderNames[len(modelFolderNames) - 1]
 
     modelFileName = 'model'
-    modelFileNamePath = modelFolder+'\\'+latestFolderName+'\\'+modelFileName
+    modelFileNamePath = str(Path(modelFolder+'/'+latestFolderName+'/'+modelFileName))
     retValue = tf.keras.models.load_model(modelFileNamePath)
     retValue.summary()
     return retValue
@@ -131,14 +131,14 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
     modelFolderPath = config.modelFolderPath
     if isAuto:
         modelFolderPath = config.modelFolderPathTurnedKey
-    modelFolderPath += '\\model_'+ timeString +''
+    modelFolderPath += '/model_'+ timeString +''
 
     modelConfig = {
         'symbols': tickerSymbols
     }
 
     configSetUpFileName = 'config.json'
-    configFileNamePath = modelFolderPath+'\\'+configSetUpFileName
+    configFileNamePath = str(Path(modelFolderPath+'/'+configSetUpFileName))
     # jsonObj = json.dumps(modelConfig, cls=SetEncoder, indent = 4) 
 
     if not os.path.exists(os.path.dirname(configFileNamePath)):
@@ -153,7 +153,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
 
 
     symbolDataFileName = 'symbolData.json'
-    symbolDataFileNamePath = modelFolderPath+'\\'+symbolDataFileName
+    symbolDataFileNamePath = str(Path(modelFolderPath+'/'+symbolDataFileName))
     # allSymbolsJsonObj = json.dumps(allSymbolsToTickerData, cls=SetEncoder, indent = 4) 
     if not os.path.exists(os.path.dirname(symbolDataFileNamePath)):
         try:
@@ -166,7 +166,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
         json.dump(allSymbolsToTickerData, outfile, cls=SetEncoder, indent=4)
     
     modelFileName = 'model'
-    modelFileNamePath = modelFolderPath+'\\'+modelFileName
+    modelFileNamePath = str(Path(modelFolderPath+'/'+modelFileName))
     model.save(modelFileNamePath)
 
 

@@ -3,6 +3,7 @@ import os
 import errno
 from datetime import datetime, timedelta
 import time
+from pathlib import Path
 from ..weatherutility import dayIndexFromStart, timeFromDayIndex
 
 time_fmt = '%m-%d-%y %H:%M:%S'
@@ -60,8 +61,8 @@ def getDownloadConfig(series_type, datatype):
         'outputsize':'full'
     }
 
-    def getSampleFoloderPath():
-        retValue = "..\\TrainingData\\StockDump\\WEATHERSAMPLE_00000\\"+series_type
+    def getSampleFoloderstr(Path():
+        retValue = str(Path("../TrainingData/StockDump/WEATHERSAMPLE_00000/"+series_type))
         return retValue
 
     def initializeDownloadCoinfg():
@@ -71,7 +72,7 @@ def getDownloadConfig(series_type, datatype):
         dirname = os.path.dirname(__file__)
         retValue = {}
 
-        fullFolderPath = getSampleFoloderPath()
+        fullFolderPath = getSampleFoloderstr(Path()
         walkedFileNames = []
         for (dirpath, dirnames, filenames) in walk(fullFolderPath):
             for fileName in filenames:
@@ -105,7 +106,7 @@ def getDownloadConfig(series_type, datatype):
     
 
     if isConfigLatest() == False:
-        folderPath = getSampleFoloderPath()
+        folderPath = getSampleFoloderstr(Path()
         batchRequests(PARAMS, folderPath, True)
         initializeDownloadCoinfg()
     
@@ -134,9 +135,9 @@ def downloadStockBySymbol (
     else:
         downloadConfig = getDownloadConfig(series_type, datatype)
         folderString = downloadConfig["folderString"]
-        folderPath = "..\\TrainingData\\StockDump\\"+folderString
+        folderPath = str(Path("../TrainingData/StockDump/"+folderString))
 
-    fullFolderPath = folderPath +"\\"+ series_type+"\\"+symbol
+    fullFolderPath = str(Path(folderPath +"/"+ series_type+"/"+symbol))
 
     pathLookup = filePath if filePath else os.path.join(dirname, fullFolderPath)
     if ignoreIfExists and os.path.exists(pathLookup):
@@ -206,7 +207,7 @@ def sendRequests(PARAMS, folderPath):
     metaData = jsonResult["Meta Data"]
     timeOfQuery = metaData["3. Last Refreshed"];
     dateOfQuery = timeOfQuery.split()[0]
-    fullFilePath = folderPath+"\\"+dateOfQuery+".json";
+    fullFilePath = str(Path(folderPath+"/"+dateOfQuery+".json"));
     print ("saving to ", fullFilePath)
     filename = os.path.join(dirname, fullFilePath)
 

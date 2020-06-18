@@ -7,6 +7,7 @@ import ast
 import sys
 import os
 import time
+from pathlib import Path
 
 
 PACKAGE_PARENT = '..'
@@ -134,7 +135,7 @@ class WeathermanTimelineSimulator:
                 
 
 def runMultipleSimulations(simulationCount = 500):
-    filePath = '.\\datafiles\\simultationtape.txt'
+    filePath = str(Path('./datafiles/simultationtape.txt'))
     file = open(filePath, "r")
     contents = file.read()
     indexCounter = 0

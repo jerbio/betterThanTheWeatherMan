@@ -5,7 +5,8 @@ import datetime
 from .downloadstockdata import downloadStockBySymbol
 from .tickerSelector import polygonIo, alphaVantage, tingo
 import pytz
-from tzlocal import get_localzone 
+from tzlocal import get_localzone
+from pathlib import Path
 
 # closeKeyString = "4. close"
 # openKeyString = "1. open"
@@ -20,13 +21,13 @@ def getStockFileNames(symbol, series_type, folderPath = None):
     # series_type = "TIME_SERIES_DAILY";
     dirname = os.path.dirname(__file__)
     retValue = {};
-    folderPath =  "..\\TrainingData\\StockDump\\" if folderPath is None else folderPath
-    fullFolderPath = folderPath+series_type+"\\"+symbol+"\\";
-    pathFoFolder = dirname+"\\" + fullFolderPath
+    folderPath =  str(Path("../TrainingData/StockDump")) if folderPath is None else folderPath
+    fullFolderPath = str(Path(folderPath+'/'+series_type+"/"+symbol+"/"));
+    pathFoFolder = str(Path(dirname+"/" + fullFolderPath))
     fullFolderPath = pathFoFolder
     for (dirpath, dirnames, filenames) in walk(fullFolderPath):
         for fileName in filenames:
-            fullFileName = fullFolderPath+fileName;
+            fullFileName = fullFolderPath+'/'+fileName;
             retValue[fileName] = (fileName, fullFileName);
     
     return retValue
@@ -141,7 +142,7 @@ def getTimeSeriesFromIntraDaily(intraDayObject, nowTimeObj, preecedingMinuteSpan
 def load_pre_time_series(symbol,
     downloadIfNotFound = True, precedingMinuteSpan = 15):
 
-    folderPath = '..\\EstimateTrainingData\\StockDump\\'
+    folderPath = str(Path('../EstimateTrainingData/StockDump/'))
     retValue = []
     allNamesIntraDay = getStockFileNames(symbol, 'TIME_SERIES_INTRADAY', folderPath=folderPath)
     allNamesSeriesDay = getStockFileNames(symbol, "TIME_SERIES_DAILY")

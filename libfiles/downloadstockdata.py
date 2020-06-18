@@ -4,6 +4,7 @@ import errno
 from datetime import datetime, timedelta
 import time
 import threading
+from pathlib import Path
 
 
 time_fmt = '%m-%d-%y %H:%M:%S'
@@ -62,11 +63,11 @@ def downloadStockBySymbol (
         'interval': interval,
         'outputsize':'full'
     }
-    folderPath = filePath if filePath  else "..\\TrainingData\\StockDump";
+    folderPath = filePath if filePath  else str(Path("../TrainingData/StockDump"));
 
     now = datetime.now();
 
-    fullFolderPath = folderPath +"\\"+ series_type+"\\"+symbol;
+    fullFolderPath = str(Path(folderPath +"/"+ series_type+"/"+symbol));
 
     pathLookup = filePath if filePath else os.path.join(dirname, fullFolderPath)
     if os.path.exists(pathLookup):
@@ -169,7 +170,7 @@ def sendIntraDayRequest(PARAMS, folderPath):
         dateString = lastEntry['date']
         dateObject = datetime.strptime(dateString, '%Y-%m-%dT%H:%M:%S.%fZ')
         dateAsString = dateObject.strftime("%Y-%m-%d")
-        fullFilePath = folderPath+"\\"+dateAsString+".json";
+        fullFilePath = str(Path(folderPath+"/"+dateAsString+".json"));
         print ("saving to ", fullFilePath)
         filename = os.path.join(dirname, fullFilePath)
 
@@ -212,7 +213,7 @@ def sendDailyRequests(PARAMS, folderPath):
         dateString = lastEntry['date']
         dateObject = datetime.strptime(dateString, '%Y-%m-%dT%H:%M:%S.%fZ')
         dateAsString = dateObject.strftime("%Y-%m-%d")
-        fullFilePath = folderPath+"\\"+dateAsString+".json";
+        fullFilePath = str(Path(folderPath+"/"+dateAsString+".json"));
         print ("saving to ", fullFilePath)
         filename = os.path.join(dirname, fullFilePath)
 
