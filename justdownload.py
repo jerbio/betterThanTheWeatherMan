@@ -1,4 +1,4 @@
-from libfiles.idealpricedsymbols import maxSymbols, subSetOfTech, SubsetOfFinance
+from libfiles.idealpricedsymbols import maxSymbols, subSetOfTech, SubsetOfFinance, nasdaqPennys
 from libfiles.downloadstockdata import groupSymbolRequest
 
 
@@ -7,6 +7,7 @@ allTheSymbols = []
 allTheSymbols.extend(maxSymbols)
 allTheSymbols.extend(subSetOfTech)
 allTheSymbols.extend(SubsetOfFinance)
+allTheSymbols.extend(nasdaqPennys)
 allTheSymbols = list(set(allTheSymbols))
 
 
@@ -32,7 +33,7 @@ def downloadDaily(isMultiThreaded=False, dontDownloadIfExists = True, symbols = 
     isMultiThreaded=isMultiThreaded)
 
 
-# downloadDaily(True, False)
+downloadDaily(True, False)
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)

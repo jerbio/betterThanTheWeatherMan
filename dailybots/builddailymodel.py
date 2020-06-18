@@ -21,4 +21,4 @@ config = WeatherManPredictionConfig()
 config.modelRebuildCount = 5
 config.numberOfDaysWithPossibleResult = 7
 config.percentageDeltaChange = 3
-generateModel(config, subSetOfTech[90:153], True)
+generateModel(config, subSetOfTech[:70], True)

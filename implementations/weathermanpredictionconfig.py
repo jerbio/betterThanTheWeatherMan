@@ -18,7 +18,7 @@ class WeatherManPredictionConfig:
         self.iterationNotes = ""
         self.threshold = 0.95
         self.dropout = 0.0
-        self.rollingWindow = 25
+        self.rollingWindow = 12
         self.previousDayDeltaCutoff = -2
         self.modelFolderPath = '.\\savedmodels'
         self.modelFolderPathTurnedKey = self.modelFolderPath + '\\lightningStrikes'

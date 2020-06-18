@@ -5,6 +5,8 @@ import datetime
 from .downloadstockdata import downloadStockBySymbol
 from .tickerSelector import polygonIo, alphaVantage, tingo
 import pytz
+import threading
+import time
 from tzlocal import get_localzone 
 
 # closeKeyString = "4. close"
@@ -242,6 +244,71 @@ def load_pre_time_series(symbol,
     
     return retValue
 
+class load_time_series_thread (threading.Thread):
+   def __init__(self, threadID, name, symbol, series_type, downloadIfNotFound, index, collection):
+      threading.Thread.__init__(self)
+      self.threadID = threadID
+      self.name = name
+      self.symbol = symbol
+      self.series_type = series_type
+      self.downloadIfNotFound = downloadIfNotFound
+      self.collection = collection
+      self.index = index
+   def run(self):
+    #   print ("Starting " + self.name)
+      loadedSymbol = load_time_series_daily(self.symbol, self.series_type, self.downloadIfNotFound)
+      self.collection[self.index] = loadedSymbol
+    #   print( "Exiting " + self.name)
+    
+
+
+#Multi threaded is not as friendly as you think
+def load_multiple_time_series_Files(
+    tickerSymbols,
+    series_type = "TIME_SERIES_DAILY",
+    downloadIfNotFound = True,
+    isMultiThreaded = True):
+    retValue = {}
+    if not isMultiThreaded:
+        for symbol in tickerSymbols:
+            tickerData = load_time_series_daily(symbol, series_type, downloadIfNotFound)
+            retValue[symbol] = tickerData
+        return retValue
+    else:
+        threadCounter = 0
+        threads = []
+        loadedContainer = []
+        symbolToIndex = {}
+        counter = 0
+        for symbol in tickerSymbols:
+            loadedContainer.append(-1)
+            symbolToIndex[symbol] = counter
+            counter += 1
+
+        for symbol in tickerSymbols:
+            threadName = 'loading symbol - '+ str(threadCounter) + ' - ' + symbol
+            index = symbolToIndex[symbol]
+            dowloadThread = load_time_series_thread(threadCounter, threadName, symbol, series_type, downloadIfNotFound, index, loadedContainer)
+            dowloadThread.start()
+            threads.append(dowloadThread)
+            # downloadStockBySymbol(symbol, series_type, filePath, dontDownloadIfExists)
+            threadCounter+=1
+            if (threadCounter)% 50 == 9:
+                time.sleep(1)
+
+        isFullyLoaded = False
+        while (not isFullyLoaded):
+            time.sleep(5)
+            for entry in loadedContainer:
+                isFullyLoaded = entry != -1
+                if not isFullyLoaded:
+                    break
+
+        for symbol in symbolToIndex:
+            index = symbolToIndex[symbol]
+            retValue[symbol] = loadedContainer[index]
+
+    return retValue
 
 def load_time_series_daily(
     symbol, 
@@ -274,6 +341,7 @@ def load_time_series_daily(
     
     if jsonObj:
         timeSeries = jsonObj
+        print('loading '+symbol+' file')
         # timeSeriesTickerData = processTimeSeries(timeSeries);
         timeSeriesTickerData = processTimeSeries_DayToStock(timeSeries);
         retValue = timeSeriesTickerData;
