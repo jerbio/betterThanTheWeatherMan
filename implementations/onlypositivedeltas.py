@@ -1161,6 +1161,18 @@ def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     #     else:
     #         retryCount -= 1
 
+def getBestOfRollers(rollingTwenties):
+    retValue = None
+    bestAccuracy = None
+    for modelObj in rollingTwenties:
+        accuracy = modelObj['test_acc']
+        if bestAccuracy is None or bestAccuracy < accuracy:
+            retValue = modelObj
+            bestAccuracy = modelObj['test_acc']
+    
+    return retValue
+
+
 
 def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
     retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
@@ -1216,6 +1228,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     sumOfPredictionSuccessRatio = 0
     eachdayAssessment = {}
     dayIndexOfDetection = []
+    rollingTwenties = []
     dayIndexDistribution = {}
     modelProcess = None
     while trainingDayEndIndex <= loopMaxIndex:
@@ -1239,7 +1252,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
                     stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
 
-            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1])[:50]
+            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= True)[:50]
 
             windowSymbolData = {}
             for symbolAndPrice in sortedSymbolDataByPrice:
@@ -1247,7 +1260,10 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
 
             if rebuildModel and len(stockDataWithinWindow) > 0:
                 modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
-                model = modelProcess['model']
+                rollingTwenties.append(modelProcess)
+                if(len(rollingTwenties) > config.rollingWindow):
+                    rollingTwenties.pop(0)
+                model = getBestOfRollers(rollingTwenties)['model']
                 rebuildModel = False
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays and len(stockDataWithinWindow) > 0:
                 totalDayCounter+=1
@@ -1539,18 +1555,18 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
 def runExec(tickerSymbols = None):
     config = WeatherManPredictionConfig()
-    config.iterationNotes = '''Changed how inflection points of preceding day works.
-        retValue = [lowestInflextionPointsFeatures,
-                 highestInflextionPointFeatures
-                 ]
+    config.iterationNotes = '''
+        1pct in 3 days
+        High value stocks,
+        original recipe, 12 day rolling windows
      '''
     
     # getStocks(tickerSymbols)
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.percentageDeltaChange = 3
-    config.numberOfDaysWithPossibleResult = 7
+    config.percentageDeltaChange = 1
+    config.numberOfDaysWithPossibleResult = 3
     config.modelRebuildCount = 1
     config.stockPerDay = 2
     config.rollingWindow = 12
