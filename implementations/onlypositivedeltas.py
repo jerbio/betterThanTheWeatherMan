@@ -267,76 +267,77 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
         retroDayAvgPrice = retroDayTickerData['ticker'][4]
         # volume = retroDayTickerData["ticker"][5]
         
-        while previousDayCounter > 0 and previousDayCountLoopLimit > 0:
-            previousDayCount -=1
-            if previousDayCount in tickerData:
-                previousDayCounter -= 1
-                finalPreviousDayIndex = previousDayCount
-                tradingDayCount += 1
-            previousDayCountLoopLimit -= 1
-        
-        avgPriceCategory = int((retroDayAvgPrice)/10)
-        dataForDay.append(avgPriceCategory)
+        if config.allowOtherDayFeatures:
+            while previousDayCounter > 0 and previousDayCountLoopLimit > 0:
+                previousDayCount -=1
+                if previousDayCount in tickerData:
+                    previousDayCounter -= 1
+                    finalPreviousDayIndex = previousDayCount
+                    tradingDayCount += 1
+                previousDayCountLoopLimit -= 1
+            
+            avgPriceCategory = int((retroDayAvgPrice)/10)
+            dataForDay.append(avgPriceCategory)
 
 
-        openPricePredictionDayDelta = retroDayOpeningPrice - refPrice
-        closePricePredictionDayDelta = retroDayClosingPrice - refPrice
-        highPricePredictionDayDelta = retroDayHighPrice - refPrice
-        lowPricePredictionDayDelta = retroDayLowPrice - refPrice
-        avgPricePredictionDayDelta = retroDayAvgPrice - refPrice
+            openPricePredictionDayDelta = retroDayOpeningPrice - refPrice
+            closePricePredictionDayDelta = retroDayClosingPrice - refPrice
+            highPricePredictionDayDelta = retroDayHighPrice - refPrice
+            lowPricePredictionDayDelta = retroDayLowPrice - refPrice
+            avgPricePredictionDayDelta = retroDayAvgPrice - refPrice
 
-        openPricePredictionDayDeltaPercent = (openPricePredictionDayDelta/refPrice) * 100
-        closePricePredictionDayDeltaPercent = (closePricePredictionDayDelta/refPrice) * 100
-        highPricePredictionDayDeltaPercent = (highPricePredictionDayDelta/refPrice) * 100
-        lowPricePredictionDayDeltaPercent = (lowPricePredictionDayDelta/refPrice) * 100
-        avgPricePredictionDayDeltaPercent = (avgPricePredictionDayDelta/refPrice) * 100
-        
-        dataForDay.append(openPricePredictionDayDeltaPercent)
-        dataForDay.append(closePricePredictionDayDeltaPercent)
-        dataForDay.append(highPricePredictionDayDeltaPercent)
-        dataForDay.append(lowPricePredictionDayDeltaPercent)
-        dataForDay.append(avgPricePredictionDayDeltaPercent)
-        
+            openPricePredictionDayDeltaPercent = (openPricePredictionDayDelta/refPrice) * 100
+            closePricePredictionDayDeltaPercent = (closePricePredictionDayDelta/refPrice) * 100
+            highPricePredictionDayDeltaPercent = (highPricePredictionDayDelta/refPrice) * 100
+            lowPricePredictionDayDeltaPercent = (lowPricePredictionDayDelta/refPrice) * 100
+            avgPricePredictionDayDeltaPercent = (avgPricePredictionDayDelta/refPrice) * 100
+            
+            dataForDay.append(openPricePredictionDayDeltaPercent)
+            dataForDay.append(closePricePredictionDayDeltaPercent)
+            dataForDay.append(highPricePredictionDayDeltaPercent)
+            dataForDay.append(lowPricePredictionDayDeltaPercent)
+            dataForDay.append(avgPricePredictionDayDeltaPercent)
+            
 
 
-        openLowDelta = retroDayLowPrice - retroDayOpeningPrice
-        openHighDelta = retroDayHighPrice - retroDayOpeningPrice
-        highLowDelta = retroDayHighPrice - retroDayLowPrice
+            openLowDelta = retroDayLowPrice - retroDayOpeningPrice
+            openHighDelta = retroDayHighPrice - retroDayOpeningPrice
+            highLowDelta = retroDayHighPrice - retroDayLowPrice
 
-        percentHighDelta = (openHighDelta / retroDayOpeningPrice) * 100
-        percentOpenLowDelta = (openLowDelta / retroDayOpeningPrice)*100
-        percentHighLowDelta = (highLowDelta / retroDayOpeningPrice)*100
+            percentHighDelta = (openHighDelta / retroDayOpeningPrice) * 100
+            percentOpenLowDelta = (openLowDelta / retroDayOpeningPrice)*100
+            percentHighLowDelta = (highLowDelta / retroDayOpeningPrice)*100
 
-        percentCloseDelta = (openHighDelta / retroDayClosingPrice)* 100
-        percentCloseLowDelta = (openLowDelta / retroDayClosingPrice) * 100
-        percentCloseHighDelta = (highLowDelta / retroDayClosingPrice) * 100
-        dataForDay.append(percentCloseDelta)
-        dataForDay.append(percentCloseLowDelta)
-        dataForDay.append(percentCloseHighDelta)
-        dataForDay.append(percentHighDelta)
-        dataForDay.append(percentOpenLowDelta)
-        dataForDay.append(percentHighLowDelta)
-        
-        
+            percentCloseDelta = (openHighDelta / retroDayClosingPrice)* 100
+            percentCloseLowDelta = (openLowDelta / retroDayClosingPrice) * 100
+            percentCloseHighDelta = (highLowDelta / retroDayClosingPrice) * 100
+            dataForDay.append(percentCloseDelta)
+            dataForDay.append(percentCloseLowDelta)
+            dataForDay.append(percentCloseHighDelta)
+            dataForDay.append(percentHighDelta)
+            dataForDay.append(percentOpenLowDelta)
+            dataForDay.append(percentHighLowDelta)
+            
+            
 
-        openCloseDelta = retroDayClosingPrice - retroDayOpeningPrice
-        if previousDayCounter != previousDayCountLimit:
-            previousDayTickerEntry = tickerData[finalPreviousDayIndex]
-            fiveDayAvgPriceDelta = (retroDayAvgPrice - previousDayTickerEntry['ticker'][4])
-        percentOpenCloseDelta = (openCloseDelta / retroDayOpeningPrice) *100
-        dataForDay.append(percentOpenCloseDelta)
-        tradingDayDelta = 0
-        percentageTradingDayDelta = 0
-        if fiveDayAvgPriceDelta is None:
-            percentFiveDayDelta = percentOpenCloseDelta
-        else:
-            percentFiveDayDelta = (fiveDayAvgPriceDelta/retroDayOpeningPrice)
-            tradingDayDelta = fiveDayAvgPriceDelta/tradingDayCount
-            percentageTradingDayDelta = ((fiveDayAvgPriceDelta/retroDayOpeningPrice) * 100)/tradingDayCount
-        
-        dataForDay.append(percentFiveDayDelta)
-        dataForDay.append(tradingDayDelta)
-        dataForDay.append(percentageTradingDayDelta)
+            openCloseDelta = retroDayClosingPrice - retroDayOpeningPrice
+            if previousDayCounter != previousDayCountLimit:
+                previousDayTickerEntry = tickerData[finalPreviousDayIndex]
+                fiveDayAvgPriceDelta = (retroDayAvgPrice - previousDayTickerEntry['ticker'][4])
+            percentOpenCloseDelta = (openCloseDelta / retroDayOpeningPrice) *100
+            dataForDay.append(percentOpenCloseDelta)
+            tradingDayDelta = 0
+            percentageTradingDayDelta = 0
+            if fiveDayAvgPriceDelta is None:
+                percentFiveDayDelta = percentOpenCloseDelta
+            else:
+                percentFiveDayDelta = (fiveDayAvgPriceDelta/retroDayOpeningPrice)
+                tradingDayDelta = fiveDayAvgPriceDelta/tradingDayCount
+                percentageTradingDayDelta = ((fiveDayAvgPriceDelta/retroDayOpeningPrice) * 100)/tradingDayCount
+            
+            dataForDay.append(percentFiveDayDelta)
+            dataForDay.append(tradingDayDelta)
+            dataForDay.append(percentageTradingDayDelta)
 
         dataForDay.append(retroDayOpeningPrice)
         dataForDay.append(retroDayLowPrice)
@@ -345,12 +346,13 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
         dataForDay.append(retroDayAvgPrice)
         # dataForDay.append(weekDay)
 
-        inflectionPointFeatures = getPreceedingDayInflectionFeatures(dayOfPrediction, tickerData)
-        if inflectionPointFeatures is not None:
-            for precedingDayInflectionFeatures in inflectionPointFeatures:
-                dataForDay.extend(precedingDayInflectionFeatures)
-            precedingNintyDays.extend(dataForDay)
-            retroTrainingDays +=1
+        if config.allowInflectionPoints:
+            inflectionPointFeatures = getPreceedingDayInflectionFeatures(dayOfPrediction, tickerData)
+            if inflectionPointFeatures is not None:
+                for precedingDayInflectionFeatures in inflectionPointFeatures:
+                    dataForDay.extend(precedingDayInflectionFeatures)
+        precedingNintyDays.extend(dataForDay)
+        retroTrainingDays +=1
         featureLen = len(dataForDay)
         if tickerFeaturesPerDay < featureLen:
             tickerFeaturesPerDay = featureLen            
@@ -603,6 +605,16 @@ def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
                 collection.append(precedingDaysData)
                 resultToData[result] = collection
 
+    
+    if 0 in resultToData:
+        print("0 count is "+str(len(resultToData[0])))
+    else:
+        print("0 count is 0")
+
+    if 1 in resultToData:
+        print("1 count is "+str(len(resultToData[1])))
+    else:
+        print("1 count is 0")
     ##### section tries to create a 50/50 split in the data if its schewed
     
     minCount = None
@@ -733,7 +745,7 @@ def reshapeData(xs, ys, featureLengthPerRetroDay):
     }
 
 
-def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResult, testData, testResult, featureLengthPerRetroDay, schewedData = None, symbolToIndex = None):
+def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResult, testData, testResult, featureLengthPerRetroDay, schewedData = None, symbolToIndex = None, printSomeThing = True):
     combinedFeaturesPerDay = len(trainData[0]["precedingDays"])
     numberOfDays = combinedFeaturesPerDay/featureLengthPerRetroDay
     numberOfDaysAsInt = int(numberOfDays) # the number of retro days 
@@ -776,10 +788,14 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
                 metrics=['accuracy'])
     
     print(model.summary())
+    verbosity = 0
+    if printSomeThing:
+        verbosity = 2
+
     history = model.fit(trainDataReshaped, trainResultReshaped, 
         validation_data= validationData,
         epochs=numberOfEpochs,
-        # verbose=2
+        verbose=verbosity
         )
     retValue = (model, None, None)
     if testData is not None and testResult is not None:
@@ -802,7 +818,7 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
     return retValue
 
 def pickStockFromProbabilities(predictionProbability, allSymbolsToTickerData = None, stockPerDay = 2, probabilityRetryCount = 1000, threshold = 0.95):
-    numberOfStockForProbability = stockPerDay + 3
+    numberOfStockForProbability = 5 if stockPerDay <= 3 else stockPerDay
     if numberOfStockForProbability % 2 == 0:
         numberOfStockForProbability += 1
     orderedByBestProbability = sorted(predictionProbability, key=lambda Probabs: (Probabs["wrongProbability"]))
@@ -1252,14 +1268,14 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
                     stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
 
-            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= True)[:50]
+            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:50]
 
             windowSymbolData = {}
             for symbolAndPrice in sortedSymbolDataByPrice:
                 windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
 
             if rebuildModel and len(stockDataWithinWindow) > 0:
-                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing=False)
                 rollingTwenties.append(modelProcess)
                 if(len(rollingTwenties) > config.rollingWindow):
                     rollingTwenties.pop(0)
@@ -1327,7 +1343,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                     soFarAccuracy = (totalCorrectOnesPrediction/totalOnesPrediction ) * 100
                     print("Total accuracy sofar "+str(soFarAccuracy))
                 print("processed "+str(totalDayCounter)+" days "+str(predictionDayStartTime))
-
+                print("Predicted "+str(numberOfActivePredictions)+" out of "+str(numberOfPossiblePredictions) + " days")
                 alreadyPredictedDays.add(predictionDayStartDayIndex)
                 dayBeforeModelrebuildCounter+=1
             foundPredictionDay = True
@@ -1368,7 +1384,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     else:
         print("Nothing to buy")
 
-def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
+def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing = True):
     retValue = None
     models = []
     modelRebuildCounter = 0
@@ -1393,7 +1409,7 @@ def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, data
     timeSpan = symbolReadEnd - symbolReadStart
     print("symbol read took "+ str(timeSpan.total_seconds()) +"s")
     while modelRebuildCounter < config.modelRebuildCount:
-        modelInfo = getModel(config, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime)
+        modelInfo = getModel(config, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing = printSomeThing)
         if(modelInfo is not None):
             models.append(modelInfo)
         modelRebuildCounter += 1
@@ -1404,7 +1420,7 @@ def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, data
     return retValue
 
 
-def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime):
+def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing = True):
     
     retValue = None
     if len(symbolToDayData) > 0:
@@ -1421,7 +1437,7 @@ def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTic
         featureDayLength = dataFormated['featureLengthPerRetroDay']
         
 
-        (model, test_loss, test_acc) = buildPredictionModel(config, trainData, trainResult, testData, testResult, featureDayLength, (testData, testResult), dataIndexToSymbol)
+        (model, test_loss, test_acc) = buildPredictionModel(config, trainData, trainResult, testData, testResult, featureDayLength, (testData, testResult), dataIndexToSymbol, printSomeThing = printSomeThing)
         retValue = {
             'model': model,
             'test_loss': test_loss,
@@ -1555,26 +1571,25 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
 def runExec(tickerSymbols = None):
     config = WeatherManPredictionConfig()
-    config.iterationNotes = '''
-        1pct in 3 days
-        High value stocks,
-        original recipe, 12 day rolling windows
-     '''
+    config.iterationNotes = ''''''
     
     # getStocks(tickerSymbols)
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.percentageDeltaChange = 1
-    config.numberOfDaysWithPossibleResult = 3
+    config.highValueStocks = False
+    config.allowInflectionPoints = True
+    config.allowOtherDayFeatures = True
+    config.percentageDeltaChange = 2
+    config.numberOfDaysWithPossibleResult = 5
     config.modelRebuildCount = 1
-    config.stockPerDay = 2
-    config.rollingWindow = 12
+    config.stockPerDay = 5
+    config.rollingWindow = 1
     config.printMe()
     currentTime = datetime.datetime.now()
     
     earliestTime = currentTime + datetime.timedelta(days=(-1000))
-    finalTime = currentTime  + datetime.timedelta(days=(0))
+    finalTime = currentTime  + datetime.timedelta(days=(-780))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
     dayIntervalConfidenceTest(earliestTime, finalTime, tickerSymbols, config)

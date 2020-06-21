@@ -19,6 +19,9 @@ class WeatherManPredictionConfig:
         self.threshold = 0.95
         self.dropout = 0.0
         self.previousDayDeltaCutoff = -2
+        self.highValueStocks = False
+        self.allowInflectionPoints = True
+        self.allowOtherDayFeatures = True
         self.modelFolderPath = './savedmodels'
         self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
         self.predictionFolder = './predictionDump'
@@ -31,7 +34,7 @@ class WeatherManPredictionConfig:
         daysPerYear: {self.daysPerYear}
         percentageDeltaChange: {self.percentageDeltaChange}
         testRatio: {self.testRatio}
-        numberOfOutlookDays: {self.numberOfDaysWithPossibleResult}
+        numberOfDaysWithPossibleResult: {self.numberOfDaysWithPossibleResult}
         modelRebuildCount: {self.modelRebuildCount}
         numberOfDaysBeforeRetrainingModel: {self.numberOfDaysBeforeRetrainingModel}
         numberOfRetroDays: {self.numberOfRetroDays}
@@ -48,6 +51,9 @@ class WeatherManPredictionConfig:
         modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey}
         predictionFolder: {self.predictionFolder}
         predictionFolderTurnedKey: {self.predictionFolderTurnedKey}
+        allowInflectionPoints: {self.allowInflectionPoints}
+        allowOtherDayFeatures: {self.allowOtherDayFeatures}
+        highValueStocks: {self.highValueStocks}
         '''
         print(retValue)
 
