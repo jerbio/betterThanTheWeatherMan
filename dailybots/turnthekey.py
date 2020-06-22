@@ -26,4 +26,4 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # config.isOverSampled = False
 # config.allowInflectionPoints = False
 # config.allowOtherDayFeatures = False
-turnTheKey(liveConfig, subSetOfTech, True)
+turnTheKey(liveConfig, subSetOfTech[90:], True)

@@ -292,7 +292,7 @@ def runMultipleSimulations(simulationCount = 500):
     minMultiplier = None
     maxMultiplier = None
 
-    percentDelta = 3
+    percentDelta = 2
     simulationInitObj = WeathermanTimelineSimulator(contents, indexDistribution, percentDelta, 1)
 
     while indexCounter < simulationCount:
