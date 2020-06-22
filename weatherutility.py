@@ -27,3 +27,17 @@ def timeToMs(dateTimeObj):
     epoch = datetime.datetime.utcfromtimestamp(0)
     retValue = (dateTimeObj - epoch).total_seconds() * 1000.0
     return retValue
+
+
+def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
+    retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
+    return retValue
+
+def getDayIndexes(allSymbolsToTickerData, symbol, dayIndex, count):
+    formatedIndexesData = allSymbolsToTickerData[symbol]["formatedIndexes"]
+    dayIndexDict = formatedIndexesData['dayIndexToListIndex']
+    dayIndexList = formatedIndexesData['orderedDayIndex']
+    indexInOrderedList = dayIndexDict[dayIndex]
+    endOfIndex = indexInOrderedList + count
+    retValue = dayIndexList[indexInOrderedList: endOfIndex]
+    return retValue

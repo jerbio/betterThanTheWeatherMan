@@ -29,11 +29,11 @@ class WeathermanTimelineSimulator:
         self.simulationTape = self.convertDictionaryStringToDict(dictionaryString)
         self.dayDistribution = self.initializeIndexDistribution(dayIndexDistribution)
         self.dayIndexToExecutedTrades = {}
-        self.finalPurse = 0
         self.percentSum = 0
         self.percentCount = 0
         self.averagePercentLoss = 0
         self.useEarlyExit = useEarlyExit
+        self.nonLoadedDayIndexes = set()
         if symbolData is None:
             stocks = list()
             stocks.extend(subSetOfTech)
@@ -69,27 +69,42 @@ class WeathermanTimelineSimulator:
         retValue = ast.literal_eval(dictionaryString)
 
         dayIndexes = retValue.keys()
+        self.updateDayIndexMapping(dayIndexes)
+        self.nonLoadedDayIndexes = set()
+        return retValue
+        
+
+    def updateDayIndexMapping(self, dayIndexes):
         orderedDayIndexes = list(dayIndexes)
         orderedDayIndexes.sort()
         index = 0
-
+        self.dayIndexToListIndex = {}
         for dayIndex in orderedDayIndexes:
             self.dayIndexToListIndex[dayIndex] = index
             index+= 1
 
         self.orderedDayIndexes = orderedDayIndexes
-        return retValue
-
 
     def getDayIndexDelta(self):
         retValue = random.choice(self.dayDistribution['randomSequence']) + 1
         return retValue
     
     def incrementDayIndex(self, currentDayIndex, delta):
+        isLoadedIndex = False
         indexOfDays = self.dayIndexToListIndex[currentDayIndex]
         updatedIndex = indexOfDays+delta
-        retValue = self.orderedDayIndexes[updatedIndex]
-        return retValue
+        if updatedIndex >= 0 and updatedIndex < len(self.orderedDayIndexes):
+            isLoadedIndex = True
+            retValue = self.orderedDayIndexes[updatedIndex]
+            if retValue in self.nonLoadedDayIndexes:# if dayIndex isn't loaded from storage or read file
+                isLoadedIndex = False
+        else:
+            isLoadedIndex = False
+            retValue = currentDayIndex + delta
+        return {
+            'dayIndex': retValue,
+            'isLoadedIndex': isLoadedIndex,
+            }
 
     # def getExecutionPrice(self, dayIndex, symbol):
     #     return 0.9999
@@ -110,14 +125,20 @@ class WeathermanTimelineSimulator:
                 # multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))) )))
                 if dayDelta is None:
                     dayDelta = self.dayDistribution['dayCount']
-                updatedDayIndexData = self.incrementDayIndex(currentDayIndex, dayDelta)
-                
+                incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+                updatedDayIndexData = incrementResult['dayIndex']
+                if not incrementResult['isLoadedIndex']:
+                    multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))) )))
+                    self.addIndexToOrderedDayIndexes(updatedDayIndexData)
+                    # updatedPrice = multiplier * availableRatio
+                    # self.updateFuturePrice(updatedDayIndexData, updatedPrice)
+                    return (multiplier, updatedDayIndexData)
+
                 currentDayTicker = getSymbolTickerDataForDayIndex(self.symbolData, symbol, currentDayIndex)
                 nextDayTicker = getSymbolTickerDataForDayIndex(self.symbolData, symbol, updatedDayIndexData)
                 percentDelta = (currentDayTicker[3] - nextDayTicker[3])/currentDayTicker[3]
                 self.percentSum += percentDelta
                 multiplier = 1 - percentDelta
-                executionDayIndex = updatedDayIndexData
                 
             else:
                 if forcePercentDelta is None:
@@ -126,76 +147,95 @@ class WeathermanTimelineSimulator:
                     multiplier = (1 - forcePercentDelta)
                 if dayDelta is None:
                     dayDelta = self.dayDistribution['dayCount']
-                updatedDayIndexData = self.incrementDayIndex(currentDayIndex, dayDelta)
+                incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+                updatedDayIndexData = incrementResult['dayIndex']
+                if not incrementResult['isLoadedIndex']:
+                    self.addIndexToOrderedDayIndexes(updatedDayIndexData)
+                    return (multiplier, updatedDayIndexData)
                 executionDayIndex = updatedDayIndexData
 
             return (multiplier, updatedDayIndexData)
 
-        try:
-            if stock['result'] == 1:
-                multiplier = (1 + self.percentageDelta)
-                dayDelta = self.getDayIndexDelta()
-                # transitionDayIndexes = getDayIndexes(self.symbolData, symbol, currentDayIndex, dayDelta)
-                # transitionDayIndexes.pop(0)
-                # purchasePrice = currentTickerData[4]
-                # thresholdPrice = purchasePrice * (1 - self.percentageDelta)
-                # stopLossActivated = -1
-                # dayCounter = 1 # plus because of transitionDayIndexes.pop(0) 
-                # for transitionDayIndex in transitionDayIndexes:
-                #     tickerPrices = getSymbolTickerDataForDayIndex(self.symbolData, symbol, transitionDayIndex)
-                #     for tickerPrice in tickerPrices:
-                #         if tickerPrice < thresholdPrice:
-                #             stopLossActivated = transitionDayIndex
-                #             break
-                    
-                #     if stopLossActivated != -1:
-                #         break
-                #     dayCounter += 1
-
-                # isStopActivated = stopLossActivated != -1
-                # isStopActivated = False
-                # if isStopActivated:
-                #     (multiplier, updatedDayIndexData) = executeLoss(self, dayCounter, (self.percentageDelta))
-                # else:
-                overHalfIndex = self.dayDistribution['dayCount'] /2
-                overHalfIndex = math.ceil(overHalfIndex)
-                if (self.useEarlyExit and dayDelta > overHalfIndex):
-                    (multiplier, updatedDayIndexData) = executeLoss(self, overHalfIndex)
-                else:
-                    updatedDayIndexData = self.incrementDayIndex(currentDayIndex, dayDelta)
-                    executionDayIndex = updatedDayIndexData
+        # try:
+        if stock['result'] == 1:
+            multiplier = (1 + self.percentageDelta)
+            dayDelta = self.getDayIndexDelta()
+            # transitionDayIndexes = getDayIndexes(self.symbolData, symbol, currentDayIndex, dayDelta)
+            # transitionDayIndexes.pop(0)
+            # purchasePrice = currentTickerData[4]
+            # thresholdPrice = purchasePrice * (1 - self.percentageDelta)
+            # stopLossActivated = -1
+            # dayCounter = 1 # plus because of transitionDayIndexes.pop(0) 
+            # for transitionDayIndex in transitionDayIndexes:
+            #     tickerPrices = getSymbolTickerDataForDayIndex(self.symbolData, symbol, transitionDayIndex)
+            #     for tickerPrice in tickerPrices:
+            #         if tickerPrice < thresholdPrice:
+            #             stopLossActivated = transitionDayIndex
+            #             break
                 
+            #     if stopLossActivated != -1:
+            #         break
+            #     dayCounter += 1
+
+            # isStopActivated = stopLossActivated != -1
+            # isStopActivated = False
+            # if isStopActivated:
+            #     (multiplier, updatedDayIndexData) = executeLoss(self, dayCounter, (self.percentageDelta))
+            # else:
+            overHalfIndex = self.dayDistribution['dayCount'] /2
+            overHalfIndex = math.ceil(overHalfIndex) -1
+            if (self.useEarlyExit and dayDelta > overHalfIndex):
+                (multiplier, updatedDayIndexData) = executeLoss(self, overHalfIndex)
             else:
-                if (self.useEarlyExit):
-                    overHalfIndex = self.dayDistribution['dayCount'] /2
-                    overHalfIndex = math.ceil(overHalfIndex) 
-                    (multiplier, updatedDayIndexData) = executeLoss(self, overHalfIndex)
-                else:
-                    lossResult = executeLoss(self)
-                    multiplier = lossResult[0]
-                    updatedDayIndexData  = lossResult[1]
+                incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+                updatedDayIndexData = incrementResult['dayIndex']
+                if not incrementResult['isLoadedIndex']:
+                    self.addIndexToOrderedDayIndexes(updatedDayIndexData)
+                    # updatedPrice = multiplier * availableRatio
+                    # self.updateFuturePrice(updatedDayIndexData, updatedPrice)
+                #     return
+                # executionDayIndex = updatedDayIndexData
+        else:
+            if (self.useEarlyExit):
+                overHalfIndex = self.dayDistribution['dayCount'] /2
+                overHalfIndex = math.ceil(overHalfIndex) -1 
+                (multiplier, updatedDayIndexData) = executeLoss(self, overHalfIndex)
+            else:
+                lossResult = executeLoss(self)
+                multiplier = lossResult[0]
+                updatedDayIndexData  = lossResult[1]
                 
                 
-        except IndexError:
-            if multiplier is None:
-                multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))))))
-            updatedPrice = multiplier * availableRatio
-            self.finalPurse += updatedPrice
-            return
-
         updatedPrice = multiplier * availableRatio
+        self.updateFuturePrice(updatedDayIndexData, updatedPrice)
+
+    def updateFuturePrice(self, updatedDayIndexData, updatedPrice):
         priceUpdates = []
         if updatedDayIndexData in self.dayIndexToExecutedTrades:
-            priceUpdates = self.dayIndexToExecutedTrades[updatedDayIndexData]
+            priceUpdateConfig = self.dayIndexToExecutedTrades[updatedDayIndexData]
+            priceUpdates = priceUpdateConfig['priceUpdates']
+            priceUpdateConfig['isRealized'] = False
         else:
-            self.dayIndexToExecutedTrades[updatedDayIndexData] = priceUpdates
-        
+            self.dayIndexToExecutedTrades[updatedDayIndexData] = {
+                'priceUpdates': priceUpdates,
+                'isRealized': False
+            }
+
         priceUpdates.append(updatedPrice)
 
+    def addIndexToOrderedDayIndexes(self, dayIndex):
+        indexes = list(self.orderedDayIndexes)
+        indexes.append(dayIndex)
+        indexes = list(set(indexes))
+        indexes.sort()
+        self.nonLoadedDayIndexes.add(dayIndex)
+        self.updateDayIndexMapping( indexes)
 
     def realizeTrades(self, dayIndex):
         if dayIndex in self.dayIndexToExecutedTrades:
-            priceUpdates = self.dayIndexToExecutedTrades[dayIndex]
+            priceUpdateConfig = self.dayIndexToExecutedTrades[dayIndex]
+            priceUpdates = priceUpdateConfig['priceUpdates']
+            priceUpdateConfig['isRealized'] = True
             for priceUpdate in priceUpdates: 
                 self.purse += priceUpdate
 
@@ -204,24 +244,37 @@ class WeathermanTimelineSimulator:
         dayIndexKeys.sort()
         dayIndexCounter = len(dayIndexKeys)
         dayRandomLimit = 12
-        indecounter = random.choices(range(dayRandomLimit))[0]
-        # indecounter = int(dayIndexCounter/2)
-        while indecounter < dayIndexCounter:
-            dayIndex = dayIndexKeys[indecounter]
+        indexCounter = random.choices(range(dayRandomLimit))[0]
+        # indexCounter = 0
+        # indexCounter = int(dayIndexCounter/2)
+        processedDaIndexes = set()
+        while indexCounter < len(self.orderedDayIndexes):
+            dayIndex = self.orderedDayIndexes[indexCounter]
+            processedDaIndexes.add(dayIndex)
             self.realizeTrades(dayIndex)
-            boughtStocks = self.simulationTape[dayIndex][0]['toBeBoughtStocks']
-            if boughtStocks is not None and len(boughtStocks) > 0:
-                numberOfStocks = len(boughtStocks)
-                pursePerStock = float(((self.purse))/numberOfStocks)
-                for stock in boughtStocks:
-                    stockData = stock
-                    if 'symbol' not in stock:
-                        stockData = stock['lowestPrediction']
-                    self.executeTrade(stockData, pursePerStock)
-                    self.purse -= pursePerStock
+            if(dayIndex in self.simulationTape):
+                boughtStocks = self.simulationTape[dayIndex][0]['toBeBoughtStocks']
+                if boughtStocks is not None and len(boughtStocks) > 0:
+                    numberOfStocks = len(boughtStocks)
+                    pursePerStock = float(((self.purse))/numberOfStocks)
+                    for stock in boughtStocks:
+                        stockData = stock
+                        if 'symbol' not in stock:
+                            stockData = stock['lowestPrediction']
+                        self.executeTrade(stockData, pursePerStock)
+                        self.purse -= pursePerStock
 
-            indecounter += 1
-        self.finalPurse += self.purse
+            indexCounter += 1
+
+        isAllRealized = True
+        for tradeDayIndex in self.dayIndexToExecutedTrades:
+            isAllRealized = self.dayIndexToExecutedTrades[tradeDayIndex]['isRealized']
+            if not isAllRealized:
+                break
+        
+
+        # print("all trades were realized " + str(isAllRealized))
+
         self.averagePercentLoss = self.percentSum/self.percentCount
 
                 
@@ -245,15 +298,15 @@ def runMultipleSimulations(simulationCount = 500):
     while indexCounter < simulationCount:
         moneySimulation = WeathermanTimelineSimulator(contents, indexDistribution, percentDelta, 1, symbolData = simulationInitObj.symbolData, useEarlyExit=True)
         moneySimulation.letsDance()
-        sumOfSimulations += moneySimulation.finalPurse
+        sumOfSimulations += moneySimulation.purse
         sumOfAveragesPercentLosses += moneySimulation.averagePercentLoss
         indexCounter+=1
 
-        if minMultiplier is None or moneySimulation.finalPurse < minMultiplier:
-            minMultiplier = moneySimulation.finalPurse
+        if minMultiplier is None or moneySimulation.purse < minMultiplier:
+            minMultiplier = moneySimulation.purse
 
-        if maxMultiplier is None or moneySimulation.finalPurse > maxMultiplier:
-            maxMultiplier = moneySimulation.finalPurse
+        if maxMultiplier is None or moneySimulation.purse > maxMultiplier:
+            maxMultiplier = moneySimulation.purse
 
     averageMultiplier = sumOfSimulations/indexCounter
     averageAveragesPercentLosses = sumOfAveragesPercentLosses/indexCounter

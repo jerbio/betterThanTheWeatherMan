@@ -1577,9 +1577,9 @@ def runExec(tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.highValueStocks = False
-    config.allowInflectionPoints = True
-    config.allowOtherDayFeatures = True
+    config.highValueStocks = True
+    config.allowInflectionPoints = False
+    config.allowOtherDayFeatures = False
     config.percentageDeltaChange = 2
     config.numberOfDaysWithPossibleResult = 5
     config.modelRebuildCount = 1
@@ -1589,7 +1589,7 @@ def runExec(tickerSymbols = None):
     currentTime = datetime.datetime.now()
     
     earliestTime = currentTime + datetime.timedelta(days=(-1000))
-    finalTime = currentTime  + datetime.timedelta(days=(-780))
+    finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
     dayIntervalConfidenceTest(earliestTime, finalTime, tickerSymbols, config)
