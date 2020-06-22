@@ -9,6 +9,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 from libfiles.idealpricedsymbols import subSetOfTech
 from implementations.weathermanpredictionconfig import WeatherManPredictionConfig
 from turnkey import generateModel, loadLatestModel, turnTheKey
+from liveConfig import liveConfig
 from justdownload import downloadDaily, downloadIntraDay
 
 
@@ -18,7 +19,11 @@ minuteSleep = 3
 sleepSeconds = minuteSleep * 60
 time.sleep(sleepSeconds)
 config = WeatherManPredictionConfig()
-config.modelRebuildCount = 5
-config.numberOfDaysWithPossibleResult = 7
-config.percentageDeltaChange = 3
-generateModel(config, subSetOfTech[90:153], True)
+# config.modelRebuildCount = 5
+# config.numberOfDaysWithPossibleResult = 7
+# config.percentageDeltaChange = 3
+# config.highValueStocks = False
+# config.isOverSampled = False
+# config.allowInflectionPoints = False
+# config.allowOtherDayFeatures = False
+generateModel(liveConfig, subSetOfTech, True)
