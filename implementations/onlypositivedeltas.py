@@ -559,7 +559,7 @@ def convertTickerForPrediction(tickerData):
     return retValue
 
 
-def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
+def convertForTraining(config:WeatherManPredictionConfig, tickerData, testRatio, ignoreClassImbalance = False):
     resultToData = {}
     retValue = {}
     featureLengthPerRetroDay = None
@@ -616,38 +616,62 @@ def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
     else:
         print("1 count is 0")
     ##### section tries to create a 50/50 split in the data if its schewed
-    
-    minCount = None
-    keyWithMinCount = None
-    for key in resultToData:
-        allFeatures = resultToData[key]
-        random.shuffle(allFeatures)
-        count = len(resultToData[key])
-        if minCount is None or count < minCount:
-            minCount = count
-            keyWithMinCount = key
-
-    restOfSchewedCollection = []
-    schewedKey = None
-    
-    if not ignoreClassImbalance:
+    if not config.isOverSampled:
+        minCount = None
+        keyWithMinCount = None
         for key in resultToData:
-            if key != keyWithMinCount:
-                restOfSchewedCollection = resultToData[key][minCount:]
-                schewedKey = key
-            resultToData[key] = resultToData[key][:minCount]
-    ### End of section removing schewed data
-    percentageDiff = []
-    for key in resultToData.keys():
-        percentageDiff.append(key)
-    percentageDiff.sort()
+            allFeatures = resultToData[key]
+            random.shuffle(allFeatures)
+            count = len(resultToData[key])
+            if minCount is None or count < minCount:
+                minCount = count
+                keyWithMinCount = key
 
+        restOfSchewedCollection = []
+        schewedKey = None
+        
+        if not ignoreClassImbalance:
+            for key in resultToData:
+                if key != keyWithMinCount:
+                    restOfSchewedCollection = resultToData[key][minCount:]
+                    schewedKey = key
+                resultToData[key] = resultToData[key][:minCount]
+        ### End of section removing schewed data
+        # percentageDiff = []
+        # for key in resultToData.keys():
+        #     percentageDiff.append(key)
+        # percentageDiff.sort()
+        # percentToIndex ={}
+        # count = 0
+        # for diff in percentageDiff:
+        #     percentToIndex[diff] = count
+        #     count +=1
+    else:
+        minCount = None
+        maxCount = None
+        keyWithMaxCount = None
+        for key in resultToData:
+            allFeatures = resultToData[key]
+            random.shuffle(allFeatures)
+            count = len(resultToData[key])
+            if maxCount is None or count > maxCount:
+                maxCount = count
+                keyWithMaxCount = key
 
-    percentToIndex ={}
-    count = 0
-    for diff in percentageDiff:
-        percentToIndex[diff] = count
-        count +=1
+        restOfSchewedCollection = []
+        schewedKey = None
+        
+        if not ignoreClassImbalance:
+            resultToData[keyWithMaxCount]
+            for key in resultToData:
+                if key != keyWithMaxCount:
+                    overSamplingCounter = 0
+                    additionalOverSamplingCount = maxCount - len(resultToData[key])
+                    while overSamplingCounter < additionalOverSamplingCount:
+                        overSampledExtraData = random.choice(resultToData[key])
+                        resultToData[key].append(overSampledExtraData)
+                        overSamplingCounter += 1
+
 
     testData = []
     trainData = []
@@ -676,10 +700,10 @@ def convertForTraining(tickerData, testRatio, ignoreClassImbalance = False):
     trainDataCount = len(trainData)
 
     if (testDataCount == 0 and testRatio != 0 and trainDataCount > 1):
-        return convertForTraining(tickerData, testRatio, True)
+        return convertForTraining(config, tickerData, testRatio, True)
     
     if (trainDataCount == 0 and testRatio != 1 and testDataCount > 1):
-        return convertForTraining(tickerData, testRatio, True)
+        return convertForTraining(config, tickerData, testRatio, True)
 
 
     if restOfSchewedCollection is not None and len(restOfSchewedCollection) > 0:
@@ -1300,7 +1324,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
 
                 
 
-                dataFormated = convertForTraining(symbolToDayData,0, True)
+                dataFormated = convertForTraining(config, symbolToDayData,0, True)
                 trainData = dataFormated['trainX']
                 trainResult = dataFormated['trainY']
                 featureDayLength = dataFormated['featureLengthPerRetroDay']
@@ -1429,7 +1453,7 @@ def getModel(config:WeatherManPredictionConfig, symbolToDayData, allSymbolsToTic
         testResult = []
         testData = []
 
-        dataFormated = convertForTraining(symbolToDayData, config.testRatio)
+        dataFormated = convertForTraining(config, symbolToDayData, config.testRatio)
         trainData = dataFormated['trainX']
         trainResult =dataFormated['trainY']
         testData = dataFormated['testX']
@@ -1577,7 +1601,7 @@ def runExec(tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.highValueStocks = True
+    config.highValueStocks = False
     config.allowInflectionPoints = False
     config.allowOtherDayFeatures = False
     config.percentageDeltaChange = 2
@@ -1585,6 +1609,7 @@ def runExec(tickerSymbols = None):
     config.modelRebuildCount = 1
     config.stockPerDay = 5
     config.rollingWindow = 1
+    config.isOverSampled = True
     config.printMe()
     currentTime = datetime.datetime.now()
     

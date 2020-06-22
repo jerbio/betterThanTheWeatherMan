@@ -27,6 +27,7 @@ class WeatherManPredictionConfig:
         self.predictionFolder = './predictionDump'
         self.predictionFolderTurnedKey = self.predictionFolder + '/lightningStrikes'
         self.preClosingMinuteSpan = 15 # The number of minutes from 'now' that'll be used to exrapolate the closing price. Assuming the curent time is currently 2:30p and this property is set to 15 min this till select ticker data between 2:15p and 2:30p to extrapolate the closing price
+        self.isOverSampled = False
 
     def printMe(self):
         retValue =f'''
@@ -54,6 +55,7 @@ class WeatherManPredictionConfig:
         allowInflectionPoints: {self.allowInflectionPoints}
         allowOtherDayFeatures: {self.allowOtherDayFeatures}
         highValueStocks: {self.highValueStocks}
+        isOverSampled: {self.isOverSampled}
         '''
         print(retValue)
 
