@@ -1305,15 +1305,18 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                     rollingTwenties.pop(0)
                 model = getBestOfRollers(rollingTwenties)['model']
                 rebuildModel = False
+            
+            testSymbolData = windowSymbolData
+            # testSymbolData = allSymbolsToTickerData
             if predictionDayStartDayIndex in dayIndexes and  predictionDayStartDayIndex not in alreadyPredictedDays and len(stockDataWithinWindow) > 0:
                 totalDayCounter+=1
                 symbolToDayData = {}
                 predictionDayStartTime = timeFromDayIndex(predictionDayStartDayIndex)
                 predictionDayEndTime = timeFromDayIndex(predictionDayEndDayIndex)
-                for symbol in windowSymbolData:
+                for symbol in testSymbolData:
                     if symbol not in symbolToDayData:
-                        tickerData = windowSymbolData[symbol]["symbolData"]
-                        dayIndexData = windowSymbolData[symbol]["formatedIndexes"]
+                        tickerData = testSymbolData[symbol]["symbolData"]
+                        dayIndexData = testSymbolData[symbol]["formatedIndexes"]
                         stockDataDayCount = len(tickerData)
                         if stockDataDayCount > numberOfDaysForTraining:
                             outlookResult = getDayOutlook(config, tickerData, dayIndexData, predictionDayStartTime, predictionDayEndTime, symbolIndex = symbol)
@@ -1323,12 +1326,11 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 
 
                 
-
                 dataFormated = convertForTraining(config, symbolToDayData,0, True)
                 trainData = dataFormated['trainX']
                 trainResult = dataFormated['trainY']
                 featureDayLength = dataFormated['featureLengthPerRetroDay']
-                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, windowSymbolData, config.stockPerDay)
+                modelAssessment = assessPredictions(config, model, trainData, trainResult, featureDayLength, dataIndexToSymbol, testSymbolData, config.stockPerDay)
                 totalOnesPredicted = modelAssessment['totalOnesPredicted']
                 correctPredictions = modelAssessment['correctPredictions']
                 toBeBoughtStocks = modelAssessment['toBeBoughtStocks']
@@ -1602,9 +1604,9 @@ def runExec(tickerSymbols = None):
     # return
 
     config.highValueStocks = False
-    config.allowInflectionPoints = False
-    config.allowOtherDayFeatures = False
-    config.percentageDeltaChange = 2
+    config.allowInflectionPoints = True
+    config.allowOtherDayFeatures = True
+    config.percentageDeltaChange = 5
     config.numberOfDaysWithPossibleResult = 5
     config.modelRebuildCount = 1
     config.stockPerDay = 5
