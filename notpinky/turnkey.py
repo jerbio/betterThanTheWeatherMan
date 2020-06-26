@@ -29,7 +29,6 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
     retryCountLimit = 4
     retryCount = 0
 
-    config.stockPerDay = 3
 
     predictionStartTime = datetime.datetime.now()
     predictionDayIndex = dayIndexFromStart(predictionStartTime)
@@ -105,8 +104,6 @@ def loadLatestModel(config:WeatherManPredictionConfig, isAuto = False):
 
 def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = False):
     config.epochCount = 200
-    config.modelRebuildCount = 3
-    config.stockPerDay = 3
     currentTime = datetime.datetime.now()
     config.printMe()
         
@@ -122,9 +119,25 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
     dataIndexToSymbol = parameters["dataIndexToSymbol"]
     allDayIndexes = parameters["dayIndexes"]
 
+
+
     trainingStartTIme = earliestTime
     trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
-    model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
+    predictionDayStartDayIndex = dayIndexFromStart(trainingEndTime)
+
+    stockDataWithinWindow = []
+    for symbol in allSymbolsToTickerData:
+        if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
+            stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
+
+    sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:50]
+
+    windowSymbolData = {}
+    for symbolAndPrice in sortedSymbolDataByPrice:
+        windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
+
+
+    model = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     predictionDayIndex = dayIndexFromStart(predictionStartTime)
     timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')

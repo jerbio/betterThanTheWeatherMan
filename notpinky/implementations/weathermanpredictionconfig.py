@@ -20,7 +20,7 @@ class WeatherManPredictionConfig:
         self.dropout = 0.0
         self.previousDayDeltaCutoff = -2
         self.highValueStocks = False
-        self.allowInflectionPoints = True
+        self.allowInflectionPoints = False
         self.allowOtherDayFeatures = True
         self.modelFolderPath = './savedmodels'
         self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
