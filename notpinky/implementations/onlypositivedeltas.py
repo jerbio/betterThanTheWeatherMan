@@ -1603,11 +1603,11 @@ def runExec(tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.highValueStocks = False
-    config.allowInflectionPoints = True
-    config.allowOtherDayFeatures = True
-    config.percentageDeltaChange = 5
-    config.numberOfDaysWithPossibleResult = 5
+    config.highValueStocks = True
+    config.allowInflectionPoints = False
+    config.allowOtherDayFeatures = False
+    config.percentageDeltaChange = 3
+    config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
     config.stockPerDay = 5
     config.rollingWindow = 1

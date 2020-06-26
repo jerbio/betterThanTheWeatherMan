@@ -9,7 +9,7 @@ from pathlib import Path
 
 time_fmt = '%m-%d-%y %H:%M:%S'
 requestBatches = [];
-timeOfRequest = "temp/lastBatch.txt"
+timeOfRequest = str(Path("temp/lastBatch.txt"))
 requestPerMinute = 20000
 currentRequestCount = 0
 oneMinuteInSeconds = 60

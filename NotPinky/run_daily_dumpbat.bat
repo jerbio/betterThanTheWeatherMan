@@ -1,1 +1,0 @@
-"python.exe" "C:\Users\jerom\Documents\workspace\python\betterthantheweatherman\dailyscript.py"

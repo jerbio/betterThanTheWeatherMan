@@ -8,7 +8,7 @@ from ..weatherutility import dayIndexFromStart, timeFromDayIndex
 
 time_fmt = '%m-%d-%y %H:%M:%S'
 requestBatches = [];
-timeOfRequest = "temp/lastBatch.txt"
+timeOfRequest = str(Path("temp/lastBatch.txt")) 
 requestPerMinute = 5;
 currentRequestCount = 0;
 oneMinuteInSeconds = 60
