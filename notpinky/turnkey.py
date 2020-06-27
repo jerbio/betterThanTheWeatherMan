@@ -1,16 +1,23 @@
 import datetime
 import os
+import sys
 import errno
 import json
 import tensorflow as tf
 import numpy
 from pathlib import Path
 
+PACKAGE_PARENT = '../../'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+PACKAGE_PARENT = '../'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
-from weatherutility import dayIndexFromStart, timeFromDayIndex
+from weatherutility import dayIndexFromStart, timeFromDayIndex, getDayIndexes
 
 # from .weatherutility import dayIndexFromStart
-from implementations.weathermanpredictionconfig import WeatherManPredictionConfig
+from weathermanpredictionconfig import WeatherManPredictionConfig
 from implementations.onlypositivedeltas import getAllTrainingPiecesPreClosing, getAllTrainingPieces, getBestModel, getStockSuggestionSymbolToData, convertTickerForPrediction, predict
 
 
@@ -52,6 +59,15 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
         if(len(stockResult) > 0):
             print ("Done analyzing you should buy the stocks below:")
             print(stockResult)
+            for stockPrediction in stockResult:
+                stockSymbol = stockPrediction['symbol']
+                if 'extrapolatedTicker' in allSymbolsToTickerData[stockSymbol]:
+                    lengthOfExtraPolations = len(allSymbolsToTickerData[stockSymbol]['extrapolatedTicker'])
+                    projectedClosingPrice = allSymbolsToTickerData[stockSymbol]['extrapolatedTicker'][lengthOfExtraPolations -1][3]
+                    stockPrediction['dayIndex'] = allSymbolsToTickerData[stockSymbol]['extrapolatedTicker'][lengthOfExtraPolations -1][7]
+                    stockPrediction['extrapolatedClosingPrice'] = projectedClosingPrice
+                    stockPrediction['extrapolatedTicker'] = allSymbolsToTickerData[stockSymbol]['extrapolatedTicker'][lengthOfExtraPolations -1]
+                    
             currentTime = datetime.datetime.now()
             timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')
             predictionFolderPath = config.predictionFolder
@@ -124,7 +140,11 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
     trainingStartTIme = earliestTime
     trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
     predictionDayStartDayIndex = dayIndexFromStart(trainingEndTime)
-
+    if predictionDayStartDayIndex not in allDayIndexes:
+        while predictionDayStartDayIndex not in allDayIndexes:
+            predictionDayStartDayIndex -= 1
+        trainingEndTime = timeFromDayIndex(predictionDayStartDayIndex)
+    
     stockDataWithinWindow = []
     for symbol in allSymbolsToTickerData:
         if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:

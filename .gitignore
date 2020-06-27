@@ -8,5 +8,5 @@
 */predictionDump/*
 datafiles/*
 *__pycache__
-.vscode/*
+*/.vscode/*
 creds.json
