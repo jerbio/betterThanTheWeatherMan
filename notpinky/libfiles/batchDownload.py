@@ -4,7 +4,7 @@ import errno
 from datetime import datetime, timedelta
 import time
 from pathlib import Path
-from ..weatherutility import dayIndexFromStart, timeFromDayIndex
+from ..weatherutility import dayIndexFromTime, timeFromDayIndex
 
 time_fmt = '%m-%d-%y %H:%M:%S'
 requestBatches = [];
@@ -82,7 +82,7 @@ def getDownloadConfig(series_type, datatype):
         latestFileName = walkedFileNames[0]
         dateString = latestFileName[:10]
         fileDayDate = datetime.datetime.strptime(dateString, '%Y-%m-%d')
-        dayIndex = dayIndexFromStart(fileDayDate)
+        dayIndex = dayIndexFromTime(fileDayDate)
         downloadConfig ={
             "currentDayIndex": dayIndex,
             "dateString": dateString,

@@ -9,4 +9,6 @@
 datafiles/*
 *__pycache__
 */.vscode/*
-creds.json
+*/.vs/*
+.vs/*
+*credential.json*

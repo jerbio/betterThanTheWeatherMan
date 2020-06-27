@@ -14,9 +14,9 @@ PACKAGE_PARENT = '../'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
-from weatherutility import dayIndexFromStart, timeFromDayIndex, getDayIndexes
+from weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexes
 
-# from .weatherutility import dayIndexFromStart
+# from .weatherutility import dayIndexFromTime
 from weathermanpredictionconfig import WeatherManPredictionConfig
 from implementations.onlypositivedeltas import getAllTrainingPiecesPreClosing, getAllTrainingPieces, getBestModel, getStockSuggestionSymbolToData, convertTickerForPrediction, predict
 
@@ -38,7 +38,7 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
 
 
     predictionStartTime = datetime.datetime.now()
-    predictionDayIndex = dayIndexFromStart(predictionStartTime)
+    predictionDayIndex = dayIndexFromTime(predictionStartTime)
 
     parameters = getAllTrainingPiecesPreClosing(config, tickerSymbols)
     allSymbolsToTickerData = parameters["allSymbolsToTickerData"]
@@ -139,7 +139,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
 
     trainingStartTIme = earliestTime
     trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
-    predictionDayStartDayIndex = dayIndexFromStart(trainingEndTime)
+    predictionDayStartDayIndex = dayIndexFromTime(trainingEndTime)
     if predictionDayStartDayIndex not in allDayIndexes:
         while predictionDayStartDayIndex not in allDayIndexes:
             predictionDayStartDayIndex -= 1
@@ -159,7 +159,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
 
     model = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
-    predictionDayIndex = dayIndexFromStart(predictionStartTime)
+    predictionDayIndex = dayIndexFromTime(predictionStartTime)
     timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')
     modelFolderPath = config.modelFolderPath
     if isAuto:

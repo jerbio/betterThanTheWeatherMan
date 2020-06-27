@@ -25,7 +25,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
 from weathermanpredictionconfig import WeatherManPredictionConfig
-from weatherutility import dayIndexFromStart, timeFromDayIndex
+from weatherutility import dayIndexFromTime, timeFromDayIndex
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -1225,8 +1225,8 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
     numberOfDaysForTraining = config.numberOfDaysForTraining
-    entryDayStartIndex = dayIndexFromStart(boundStartTime) - numberOfDaysForTraining
-    entryDayEndIndex = dayIndexFromStart(boundEndTime)
+    entryDayStartIndex = dayIndexFromTime(boundStartTime) - numberOfDaysForTraining
+    entryDayEndIndex = dayIndexFromTime(boundEndTime)
     outlookDayLimit = config.numberOfDaysWithPossibleResult
     
     parameters = getAllTrainingPieces(config, tickerSymbols)
@@ -1528,7 +1528,7 @@ def getStocks(tickerSymbols, date=None):
     predictionStartTime = finalTime
     retryCountLimit = 4
     retryCount = 0
-    predictionDayIndex = dayIndexFromStart(predictionStartTime)
+    predictionDayIndex = dayIndexFromTime(predictionStartTime)
 
     while predictionDayIndex not in allDayIndexes and retryCount < retryCountLimit:
         predictionDayIndex -= 1
@@ -1575,7 +1575,7 @@ def getPreCloseStocks(tickerSymbols, date=None):
     predictionStartTime = finalTime
     retryCountLimit = 4
     retryCount = 0
-    predictionDayIndex = dayIndexFromStart(predictionStartTime)
+    predictionDayIndex = dayIndexFromTime(predictionStartTime)
 
     while predictionDayIndex not in allDayIndexes and retryCount < retryCountLimit:
         predictionDayIndex -= 1

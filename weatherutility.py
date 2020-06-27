@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-def dayIndexFromStart(time):
+def dayIndexFromTime(time):
     '''
         Giving a time after 1970 Jan 1 this function returns the number of days from 1970 Jan 1 12:00 AM rounded down
     '''

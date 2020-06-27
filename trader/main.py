@@ -7,10 +7,16 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 
 from weathermanpredictionconfig import WeatherManPredictionConfig
-from StockPicker import StockPicker
+from trader import Trader
+from stockpicker import StockPicker
 
 
-config = WeatherManPredictionConfig()
-stockpicker = StockPicker(config)
+# config = WeatherManPredictionConfig()
+# stockpicker = StockPicker(config)
 
-stockpicker.getLatestStocksLocal()
+# latestStocks = stockpicker.getLatestStocksLocal()
+# print(str(latestStocks))
+
+
+botTrader = Trader()
+botTrader.endOfDayTrade()
