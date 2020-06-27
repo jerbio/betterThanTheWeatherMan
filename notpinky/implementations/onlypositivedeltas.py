@@ -13,7 +13,10 @@ from numpy import array, transpose
 import sys
 import os
 
-PACKAGE_PARENT = '..'
+PACKAGE_PARENT = '../../'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+PACKAGE_PARENT = '../'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
@@ -21,7 +24,7 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
-from .weathermanpredictionconfig import WeatherManPredictionConfig
+from weathermanpredictionconfig import WeatherManPredictionConfig
 from weatherutility import dayIndexFromStart, timeFromDayIndex
 
 # config = tf.ConfigProto()

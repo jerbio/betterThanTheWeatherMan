@@ -6,7 +6,7 @@ import tensorflow as tf
 from turnkey import generateModel, loadLatestModel, turnTheKey
 import pytz
 from tzlocal import get_localzone # $ pip install tzlocal
-from implementations.weathermanpredictionconfig import WeatherManPredictionConfig
+from weathermanpredictionconfig import WeatherManPredictionConfig
 
 
 

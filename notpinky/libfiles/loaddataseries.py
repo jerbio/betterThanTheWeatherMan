@@ -326,6 +326,7 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         "min":None,
         "max":None,
     }
+    extrapolatedTicker = []
     for entry in timeSeriesDict:
         timeStr = entry['date']
         timeData = entry
@@ -342,8 +343,12 @@ def processTimeSeries_DayToStock(timeSeriesDict):
             currentMax = dayDiff
             bounds["max"] = currentMax
 
+        whenIsExtrapolated = False
+        if "isExtrapolated" in timeData:
+            whenIsExtrapolated = True
+        
         tickerData = []
-        allDayIndexes.add(dayDiff);
+        allDayIndexes.add(dayDiff)
         if dayDiff in symbolData:
             tickerData = symbolData[dayDiff][tickerKey]
 
@@ -358,6 +363,7 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         volume = float(timeData[volumeKeyString]);
         avgPrice = (closePrice + openPrice)/2
         
+        
         # DO NOT CHANGE THE APPEND ORDER 
         tickerData.append(openPrice);#0
         tickerData.append(lowestPrice);#1
@@ -365,6 +371,14 @@ def processTimeSeries_DayToStock(timeSeriesDict):
         tickerData.append(closePrice);#3
         tickerData.append(avgPrice);#4
         tickerData.append(volume);#5
+        tickerData.append(whenIsExtrapolated);#6
+        tickerData.append(dayDiff);#7
+
+        
+        if whenIsExtrapolated is True:
+            extrapolatedTicker.append(tickerData)
+        else:
+            pass
         
     # symbolData["allDayIndexes"] = allDayIndexes
     # symbolData["dayBounds"] = bounds
@@ -378,9 +392,10 @@ def processTimeSeries_DayToStock(timeSeriesDict):
     retValue["symbolData"] = symbolData
     retValue["dayBounds"] = bounds
     retValue["allDayIndexes"] = allDayIndexes
+    retValue["extrapolatedTicker"] = extrapolatedTicker
     retValue["formatedIndexes"] = {
         'dayIndexToListIndex': dayIndexToListIndex,
         'orderedDayIndex': dayIndexList,
         'allDayIndexes': allDayIndexes
     }
-    return retValue;
+    return retValue
