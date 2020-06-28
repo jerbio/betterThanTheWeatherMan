@@ -64,7 +64,7 @@ class Trader:
                 for stock in symbols:
                     self.buyStock(stock, purserPerStockSymbol)
 
-    def buyStock(self, stockSymbol, priceLimit):
+    def buyStock(self, stockSymbol, orderBudget, limitPrice = None):
         pass
 
     def endOfDayTrade(self):
