@@ -32,7 +32,7 @@ class StockPicker:
         currentTime = datetime.datetime.now()
         currentDayIndex = dayIndexFromTime(currentTime)
         for stockPrediction in predictionCopy:
-            isToday = stockPrediction['dayIndex'] is currentDayIndex
+            isToday = stockPrediction['dayIndex'] == currentDayIndex
             stockPrediction['isToday'] = isToday
         return predictionCopy
 

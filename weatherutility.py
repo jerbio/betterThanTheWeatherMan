@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import requests
 from pathlib import Path
 
 def dayIndexFromTime(time):
@@ -70,7 +71,33 @@ def load_prediction(predicitonFilePath = None):
     return retValue 
 
 
-def getDayIndexes(orderedDayIndexes, dayIndexToIndexInList, referenceDayIndex, dayIndexDelta):
+def getCredentials():
+    credentialFilePath = 'credential.json'
+    credentials = {}
+    with open(credentialFilePath) as f:
+        credentials = json.load(f)
+
+    return credentials
+
+def getRealtimeStockPrice(symbol):
+    if symbol:
+        urlPrefix = 'https://api.tiingo.com/iex/'
+        url = urlPrefix + symbol
+        credentials = getCredentials()
+        apiKey = credentials['ticker']['apiKey']
+        relevantParams = {
+            'token': apiKey
+        }
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        r = requests.get(url = url,params = relevantParams, headers=headers)
+        retValue = r.json()
+        return retValue
+
+    
+
+def getDayIndexByDelta(orderedDayIndexes, dayIndexToIndexInList, referenceDayIndex, dayIndexDelta):
     ''' 
         function gets the next or preceding dayIndexes from referenceDayIndex.
         If dayIndexDelta is positive it is next dayIndexDelta inclusive of referenceDayIndex

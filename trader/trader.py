@@ -2,6 +2,7 @@ import robin_stocks as r
 import sys
 import os
 import json
+import math
 from pathlib import Path
 
 PACKAGE_PARENT = '../'
@@ -10,6 +11,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from stockpicker import StockPicker
 from weathermanpredictionconfig import WeatherManPredictionConfig
+from weatherutility import getRealtimeStockPrice
 
 #Buy 10 shares of Apple at market price 
 # responseResult = r.order_buy_market('BNFT', 1)
@@ -27,6 +29,7 @@ class Trader:
         self.credentialFilePath = str(Path('credential.json'))
         self.credData = {}
         self.robinhood = r
+        self.excludedStocks = set()
         self.loadCredentials()
         config = WeatherManPredictionConfig()
         self.stockPicker = StockPicker(config)
@@ -55,17 +58,50 @@ class Trader:
         return buyPower
 
     def buyStocks(self, symbols, purseValue = None):
+        allowedSymbols = set()
+        for eachSymbol in symbols:
+            if eachSymbol not in self.excludedStocks:
+                allowedSymbols.add(eachSymbol)
+
         if purseValue is None:
             purseValue = float(self.getBuyingPower())
         if purseValue > 0:
-            stockSymbolCount = len(symbols)
+            stockSymbolCount = len(allowedSymbols)
             if stockSymbolCount > 0:
                 purserPerStockSymbol = purseValue/stockSymbolCount
-                for stock in symbols:
-                    self.buyStock(stock, purserPerStockSymbol)
+                for stock in allowedSymbols:
+                    symbol = stock['symbol']
+                    latestStockInfo = getRealtimeStockPrice(symbol)
+                    if latestStockInfo and len(latestStockInfo) > 0 and ('last' in latestStockInfo[0]):
+                        latestPrice = latestStockInfo[0]['last']
+                        limitPrice = latestPrice - 0.02
+                        self.buyStockByBudget(symbol, purserPerStockSymbol, limitPrice)
 
-    def buyStock(self, stockSymbol, orderBudget, limitPrice = None):
+    def buyStockByBudget(self, stockSymbol, orderBudget, limitPrice = None):
+        pricePerStock = limitPrice
+        if limitPrice is None:
+            latestStockInfo = getRealtimeStockPrice(stockSymbol)
+            if latestStockInfo and len(latestStockInfo) > 0 and ('last' in latestStockInfo[0]):
+                latestPrice = latestStockInfo[0]['last']
+                pricePerStock = latestPrice
+                
+        
+        shareCount =  math.floor(orderBudget/pricePerStock)
+        if shareCount > 1:
+            self.buyStockByCount(stockSymbol, shareCount, limitPrice)
         pass
+
+    def buyStockByCount(self, stockSymbol, quantity, limitPrice = None):
+        retValue = None
+        if limitPrice is None:
+            print("Placed an order for "+str(quantity) + " of "+ str(stockSymbol))
+            retValue = self.robinhood.order_buy_market(stockSymbol, quantity, extendedHours= True)
+        else:
+            print("Placed an order for "+str(quantity) + " of "+ str(stockSymbol) + " at limit price $" + str(limitPrice))
+            retValue = self.robinhood.order_buy_limit(stockSymbol, quantity, limitPrice=limitPrice, extendedHours= True)
+        
+        return retValue
+
 
     def endOfDayTrade(self):
         stocks = self.stockPicker.getLatestStocksLocal()

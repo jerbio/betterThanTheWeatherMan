@@ -19,7 +19,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 from datafiles.simultationDistribution import indexDistribution
 from weatherutility import getSymbolTickerDataForDayIndex, getDayIndexes, timeFromDayIndex, dayIndexFromTime
 from libfiles.loaddataseries import load_time_series_daily
-from libfiles.idealpricedsymbols import allTheSymbols, turnTheKey, nasdaqPennys, subSetOfTech
+from libfiles.idealpricedsymbols import allTheSymbols, turnTheKey, nasdaqPennys, subSetOfTech, healthcare
 
 class WeathermanTimelineSimulator:
     def __init__(self, dictionaryString, dayIndexDistribution, percentageDelta, purse = 100, symbolData = None, useEarlyExit = True):
@@ -45,6 +45,7 @@ class WeathermanTimelineSimulator:
         if symbolData is None:
             stocks = list()
             stocks.extend(subSetOfTech)
+            # stocks.extend(healthcare)
             # stocks.extend(nasdaqPennys)
             stocks.append("TOPS")
             stocks.append("CSPI")
@@ -97,10 +98,11 @@ class WeathermanTimelineSimulator:
         retValue = random.choice(self.dayDistribution['randomSequence']) + 1
         return retValue
     
-    def incrementDayIndex(self, currentDayIndex, delta):
+    def incrementDayIndex(self, currentDayIndex, delta, symbol):
         isLoadedIndex = False
-        indexOfDays = self.dayIndexToListIndex[currentDayIndex]
-        updatedIndex = indexOfDays+delta
+        # indexOfDays = self.dayIndexToListIndex[currentDayIndex]
+        dayIndexes = getDayIndexes(self.symbolData, symbol,currentDayIndex,delta+1 )
+        updatedIndex = dayIndexes[len(dayIndexes) - 1]
         if updatedIndex >= 0 and updatedIndex < len(self.orderedDayIndexes):
             isLoadedIndex = True
             retValue = self.orderedDayIndexes[updatedIndex]
@@ -189,7 +191,7 @@ class WeathermanTimelineSimulator:
             # multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))) )))
             if dayDelta is None:
                 dayDelta = self.dayDistribution['dayCount']
-            incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+            incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta, symbol)
             updatedDayIndexData = incrementResult['dayIndex']
             if not incrementResult['isLoadedIndex']:
                 multiplier = (1 - (((self.percentageDelta * (random.uniform(-0.8, 3.5))) )))
@@ -201,7 +203,6 @@ class WeathermanTimelineSimulator:
             percentDelta = (nextDayTicker[3] - currentDayTicker[3])/currentDayTicker[3]
             if percentDelta > .01:
                  percentDelta = 0.0
-            self.percentSum += percentDelta
             multiplier = 1 + percentDelta
             
         else:
@@ -211,7 +212,7 @@ class WeathermanTimelineSimulator:
                 multiplier = (1 + forcePercentDelta)
             if dayDelta is None:
                 dayDelta = self.dayDistribution['dayCount']
-            incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+            incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta, symbol)
             updatedDayIndexData = incrementResult['dayIndex']
             if not incrementResult['isLoadedIndex']:
                 self.addIndexToOrderedDayIndexes(updatedDayIndexData)
@@ -236,8 +237,8 @@ class WeathermanTimelineSimulator:
         # try:
         if isWinTrade:
             multiplier = (1 + self.percentageDelta)
-            dayDelta = self.getDayIndexDelta()
-            # dayDelta = self.getEarliestDayDeltaIndexAbovePercentageDelta(symbol, currentDayIndex)
+            # dayDelta = self.getDayIndexDelta()
+            dayDelta = self.getEarliestDayDeltaIndexAbovePercentageDelta(symbol, currentDayIndex)
 
 
             earliestDayExit = overHalfIndex if self.useEarlyExit else dayDelta
@@ -248,7 +249,7 @@ class WeathermanTimelineSimulator:
                 if (self.useEarlyExit and dayDelta > overHalfIndex):
                     (multiplier, updatedDayIndexData) = self.executeLoss(currentDayIndex, symbol, overHalfIndex)
                 else:
-                    incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta)
+                    incrementResult = self.incrementDayIndex(currentDayIndex, dayDelta, symbol)
                     updatedDayIndexData = incrementResult['dayIndex']
                     if not incrementResult['isLoadedIndex']:
                         self.addIndexToOrderedDayIndexes(updatedDayIndexData)
@@ -275,6 +276,7 @@ class WeathermanTimelineSimulator:
         if availableRatio > 0:
             if multiplier < 1:
                 self.failCounter += 1
+                self.percentSum += (1 - multiplier)
             else:
                 self.successCounter += 1
         updatedPrice = multiplier * availableRatio
@@ -373,7 +375,7 @@ def runMultipleSimulations(simulationCount = 500):
     minMultiplier = None
     maxMultiplier = None
 
-    percentDelta = 2
+    percentDelta = 3
     simulationInitObj = WeathermanTimelineSimulator(contents, indexDistribution, percentDelta, 1)
     
 

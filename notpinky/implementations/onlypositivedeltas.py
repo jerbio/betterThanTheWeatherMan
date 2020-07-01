@@ -1606,9 +1606,9 @@ def runExec(tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.highValueStocks = True
-    config.allowInflectionPoints = False
-    config.allowOtherDayFeatures = False
+    config.highValueStocks = False
+    config.allowInflectionPoints = True
+    config.allowOtherDayFeatures = True
     config.percentageDeltaChange = 3
     config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
