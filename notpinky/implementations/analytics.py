@@ -83,11 +83,13 @@ def getTrafficTape(filePath='.\\notpinky\\datafiles\\simultationtape.txt'):
         }
 
 
+    plt.plot(dayIndexes, completionRates)
+    plt.show()
+
     return {'completionRateGraph': completionRateGraph, 'percentageDistribution': percentageDistribution}
 
 
-    # plt.plot(dayIndexes, completionRates)
-    # plt.show()
+    
 
 
 graphData = getTrafficTape()

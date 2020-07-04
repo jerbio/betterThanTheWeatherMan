@@ -60,8 +60,8 @@ class Trader:
     def buyStocks(self, symbols, purseValue = None):
         allowedSymbols = set()
         for eachSymbol in symbols:
-            if eachSymbol not in self.excludedStocks:
-                allowedSymbols.add(eachSymbol)
+            if eachSymbol['symbol'] not in self.excludedStocks:
+                allowedSymbols.add(eachSymbol['symbol'])
 
         if purseValue is None:
             purseValue = float(self.getBuyingPower())
@@ -69,8 +69,8 @@ class Trader:
             stockSymbolCount = len(allowedSymbols)
             if stockSymbolCount > 0:
                 purserPerStockSymbol = purseValue/stockSymbolCount
-                for stock in allowedSymbols:
-                    symbol = stock['symbol']
+                for stockSymbol in allowedSymbols:
+                    symbol = stockSymbol
                     latestStockInfo = getRealtimeStockPrice(symbol)
                     if latestStockInfo and len(latestStockInfo) > 0 and ('last' in latestStockInfo[0]):
                         latestPrice = latestStockInfo[0]['last']
