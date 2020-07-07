@@ -19,4 +19,5 @@ from stockpicker import StockPicker
 
 
 botTrader = Trader()
+botTrader.addToAvoidedStocks("bcov")
 botTrader.endOfDayTrade()

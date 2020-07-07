@@ -74,7 +74,7 @@ class Trader:
                     latestStockInfo = getRealtimeStockPrice(symbol)
                     if latestStockInfo and len(latestStockInfo) > 0 and ('last' in latestStockInfo[0]):
                         latestPrice = latestStockInfo[0]['last']
-                        limitPrice = latestPrice - 0.02
+                        limitPrice = latestPrice
                         self.buyStockByBudget(symbol, purserPerStockSymbol, limitPrice)
 
     def buyStockByBudget(self, stockSymbol, orderBudget, limitPrice = None):
@@ -102,6 +102,13 @@ class Trader:
         
         return retValue
 
+    def addToAvoidedStocks(self, stockSymbol):
+        if stockSymbol:
+            self.excludedStocks.add(stockSymbol.upper())
+
+    def removeFromAvoidedStocks(self, stockSymbol):
+        if stockSymbol:
+            self.excludedStocks.remove(stockSymbol.upper())
 
     def endOfDayTrade(self):
         stocks = self.stockPicker.getLatestStocksLocal()

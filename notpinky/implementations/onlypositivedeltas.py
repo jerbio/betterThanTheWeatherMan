@@ -25,7 +25,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
 from weathermanpredictionconfig import WeatherManPredictionConfig
-from weatherutility import dayIndexFromTime, timeFromDayIndex
+from weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -60,14 +60,22 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
 
 
 
-def getPreceedingDayInflectionFeatures(dayIndex, timeData):
+def getPreceedingDayInflectionFeatures(dayIndex, timeData, dayIndexData):
     earliestDay = dayIndex - 91
     dayIndexesDict = {}
     tickerInfo = timeData[dayIndex]
-    loopDayIndex = dayIndex
+    dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
+    orderedDayIndex = dayIndexData['orderedDayIndex']
+    loopDayIndex = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -1)[0]
     foundEarliestDay = False
+    
+
+    
+
     while not foundEarliestDay:
-        sevenDayIndexes = precedingDayIndexes(loopDayIndex, 7, timeData)
+        # sevenDayIndexes = precedingDayIndexes(loopDayIndex, 7, timeData)
+        sevenDayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, loopDayIndex, -6)
+        sevenDayIndexes.reverse()
         maxPriceKey = 'highprice'
         lowPriceKey = 'lowprice'
         dayIndexesDict[loopDayIndex] = {
@@ -89,7 +97,7 @@ def getPreceedingDayInflectionFeatures(dayIndex, timeData):
         
         loopEarliestDay = sevenDayIndexes[len(sevenDayIndexes) -1]
         if loopEarliestDay > earliestDay:
-            loopDayIndex = loopEarliestDay - 1
+            loopDayIndex = loopEarliestDay#getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, loopDayIndex, -1)[0]
         else:
             foundEarliestDay = True
             break
@@ -220,7 +228,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
     retryCount = 7
     foundEarliestDay = False
     featureLen = -1
-    tickerFeaturesPerDay = -1
+    tickerFeaturesPerDay = None
     allRetroDayIndexes = set()
     beginningOfTime_str = "1970-01-01 00:00:00"
     beginningOfTime = datetime.datetime.strptime(beginningOfTime_str, '%Y-%m-%d %H:%M:%S')
@@ -350,15 +358,18 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
         # dataForDay.append(weekDay)
 
         if config.allowInflectionPoints:
-            inflectionPointFeatures = getPreceedingDayInflectionFeatures(dayOfPrediction, tickerData)
+            inflectionPointFeatures = getPreceedingDayInflectionFeatures(dayOfPrediction, tickerData, dayIndexData)
             if inflectionPointFeatures is not None:
                 for precedingDayInflectionFeatures in inflectionPointFeatures:
                     dataForDay.extend(precedingDayInflectionFeatures)
         precedingNintyDays.extend(dataForDay)
         retroTrainingDays +=1
         featureLen = len(dataForDay)
-        if tickerFeaturesPerDay < featureLen:
-            tickerFeaturesPerDay = featureLen            
+        if tickerFeaturesPerDay is None:
+            tickerFeaturesPerDay = featureLen
+        
+        if featureLen != tickerFeaturesPerDay:
+            raise NameError('broken feature len')
     
     precedingNintyDays = slicePrecedingDaysToStandardLength(precedingNintyDays, tickerFeaturesPerDay, dayCountForFeatures)
     if precedingNintyDays is not None:
@@ -516,12 +527,15 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
 def slicePrecedingDaysToStandardLength(precedingNintyDays, tickerFeaturesPerDay, dayCountForFeatures):
     desiredNumberOfRetroDaysForAnalysis = int(0.667 * dayCountForFeatures) #We want to have at least two third of the count of the calendar days available as stock days
     retValue = None
-    if tickerFeaturesPerDay > 0:
+    if tickerFeaturesPerDay is not None:
         serializedDayFeatureLimit = desiredNumberOfRetroDaysForAnalysis * tickerFeaturesPerDay
         if len(precedingNintyDays) >= serializedDayFeatureLimit:
             precedingNintyDayCount = len(precedingNintyDays)
             precedingNintyDays = precedingNintyDays[(precedingNintyDayCount - serializedDayFeatureLimit):precedingNintyDayCount]
             retValue = precedingNintyDays
+    else:
+        a= 5+6
+        pass
 
     return retValue
 
@@ -1618,7 +1632,14 @@ def runExec(tickerSymbols = None):
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = currentTime + datetime.timedelta(days=(-1000))
+    earliestTime = datetime.datetime.strptime('2018-08-08 00:00:00', '%Y-%m-%d %H:%M:%S')
+    
+    earliestTimeDayIndex = dayIndexFromTime(earliestTime)
+    earliestTimeDayIndex -= (config.numberOfDaysWithPossibleResult - 1)
+    earliestTime = timeFromDayIndex(earliestTimeDayIndex)
+
+
+    # earliestTime = currentTime + datetime.timedelta(days=(-1010))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))

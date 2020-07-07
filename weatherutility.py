@@ -115,10 +115,10 @@ def getDayIndexByDelta(orderedDayIndexes, dayIndexToIndexInList, referenceDayInd
             beginIndex = indexInList
         else:
             finalIndex = indexInList+1
-            beginIndex += dayIndexDelta
+            beginIndex = indexInList + dayIndexDelta
             if beginIndex < 0:
                 beginIndex = 0
 
-    retValue = orderedDayIndexes[beginIndex: finalIndex]
+        retValue = orderedDayIndexes[beginIndex: finalIndex]
 
-    return retValue
+        return retValue
