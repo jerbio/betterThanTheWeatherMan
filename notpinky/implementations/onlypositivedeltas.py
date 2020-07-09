@@ -61,11 +61,12 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
 
 
 def getPreceedingDayInflectionFeatures(dayIndex, timeData, dayIndexData):
-    earliestDay = dayIndex - 91
-    dayIndexesDict = {}
-    tickerInfo = timeData[dayIndex]
     dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
     orderedDayIndex = dayIndexData['orderedDayIndex']
+    earliestDay = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -91)[0]
+    dayIndexesDict = {}
+    tickerInfo = timeData[dayIndex]
+    
     loopDayIndex = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -1)[0]
     foundEarliestDay = False
     
@@ -1632,14 +1633,14 @@ def runExec(tickerSymbols = None):
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    earliestTime = datetime.datetime.strptime('2018-08-08 00:00:00', '%Y-%m-%d %H:%M:%S')
+    # earliestTime = datetime.datetime.strptime('2018-08-08 00:00:00', '%Y-%m-%d %H:%M:%S')
     
-    earliestTimeDayIndex = dayIndexFromTime(earliestTime)
-    earliestTimeDayIndex -= (config.numberOfDaysWithPossibleResult - 1)
-    earliestTime = timeFromDayIndex(earliestTimeDayIndex)
+    # earliestTimeDayIndex = dayIndexFromTime(earliestTime)
+    # earliestTimeDayIndex -= (config.numberOfDaysWithPossibleResult - 1)
+    # earliestTime = timeFromDayIndex(earliestTimeDayIndex)
 
 
-    # earliestTime = currentTime + datetime.timedelta(days=(-1010))
+    earliestTime = currentTime + datetime.timedelta(days=(-1010))
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))

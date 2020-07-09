@@ -28,3 +28,6 @@ config = WeatherManPredictionConfig()
 # config.allowInflectionPoints = False
 # config.allowOtherDayFeatures = False
 generateModel(liveConfig, subSetOfTech, True)
+liveConfig.allowInflectionPoints = True
+liveConfig.allowOtherDayFeatures = True
+generateModel(liveConfig, subSetOfTech, False)

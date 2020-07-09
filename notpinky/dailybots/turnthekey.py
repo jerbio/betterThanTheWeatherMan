@@ -32,3 +32,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 liveConfig.stockPerDay = 5
 turnTheKey(liveConfig, subSetOfTech[90:], True)
+liveConfig.allowInflectionPoints = True
+liveConfig.allowOtherDayFeatures = True
+print("With more aggressive approach")
+turnTheKey(liveConfig, subSetOfTech[90:], False)
