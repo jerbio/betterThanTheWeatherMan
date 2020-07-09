@@ -7,9 +7,9 @@ from pathlib import Path
 
 intraDaySeriesType = 'TIME_SERIES_INTRADAY'
 allTheSymbols = []
-allTheSymbols.extend(maxSymbols)
-allTheSymbols.extend(subSetOfTech)
-allTheSymbols.extend(SubsetOfFinance)
+allTheSymbols.extend(maxSymbols['symbols'])
+allTheSymbols.extend(subSetOfTech['symbols'])
+allTheSymbols.extend(SubsetOfFinance['symbols'])
 allTheSymbols = list(set(allTheSymbols))
 
 # groupSymbolRequest(allTheSymbols,

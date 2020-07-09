@@ -4,10 +4,10 @@ from libfiles.downloadstockdata import groupSymbolRequest
 
 intraDaySeriesType = 'TIME_SERIES_INTRADAY'
 allTheSymbols = []
-allTheSymbols.extend(maxSymbols)
-allTheSymbols.extend(subSetOfTech)
-allTheSymbols.extend(SubsetOfFinance)
-allTheSymbols.extend(healthcare)
+allTheSymbols.extend(maxSymbols['symbols'])
+allTheSymbols.extend(subSetOfTech['symbols'])
+allTheSymbols.extend(SubsetOfFinance['symbols'])
+allTheSymbols.extend(healthcare['symbols'])
 allTheSymbols = list(set(allTheSymbols))
 
 
@@ -32,11 +32,3 @@ def downloadDaily(isMultiThreaded=False, dontDownloadIfExists = True, symbols = 
     isMultiThreaded=isMultiThreaded)
 
 
-# downloadDaily(True, False)
-
-
-# groupSymbolRequest(maxSymbols, ignoreIfExists = True)
-# groupSymbolRequest(subSetOfTech, ignoreIfExists = True)
-# groupSymbolRequest(SubsetOfFinance, ignoreIfExists = True)
-
-# runExec(downloadedSymbols)

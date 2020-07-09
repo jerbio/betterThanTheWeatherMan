@@ -26,6 +26,8 @@ class WeatherManPredictionConfig:
         self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
         self.predictionFolder = './predictionDump'
         self.predictionFolderTurnedKey = self.predictionFolder + '/lightningStrikes'
+        self.exchange = 'nyse'
+        self.category = 'health'
         self.preClosingMinuteSpan = 15 # The number of minutes from 'now' that'll be used to exrapolate the closing price. Assuming the curent time is currently 2:30p and this property is set to 15 min this till select ticker data between 2:15p and 2:30p to extrapolate the closing price
         self.isOverSampled = False
 
@@ -33,6 +35,8 @@ class WeatherManPredictionConfig:
         retValue =f'''
         epoch count: {self.epochCount}
         daysPerYear: {self.daysPerYear}
+        stockCategory = {self.category}
+        exchange = {self.exchange}
         percentageDeltaChange: {self.percentageDeltaChange}
         testRatio: {self.testRatio}
         numberOfDaysWithPossibleResult: {self.numberOfDaysWithPossibleResult}

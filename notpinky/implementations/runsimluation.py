@@ -41,13 +41,15 @@ class WeathermanTimelineSimulator:
         self.lossCounter = 0
         self.successRatio = 0
         self.nonLoadedDayIndexes = set()
+        self.firstProccessedDayIndex = 0
+        self.lastProccessedDayIndex = 0
         self.stopLossIsActive = True
         if symbolData is None:
             stocks = list()
-            stocks.extend(subSetOfTech)
-            #stocks.extend(SubsetOfFinance)
-            #stocks.extend(healthcare)
-            #stocks.extend(nasdaqPennys)
+            # stocks.extend(subSetOfTech['symbols'])
+            #stocks.extend(SubsetOfFinance['symbols'])
+            stocks.extend(healthcare['symbols'])
+            #stocks.extend(nasdaqPennys['symbols'])
             stocks.append("TOPS")
             stocks.append("CSPI")
             self.loadAllSymbolTickerDataIntoMemory(stocks)
@@ -158,7 +160,7 @@ class WeathermanTimelineSimulator:
             transitionDayIndexes.pop(0)
             currentTickerData = getSymbolTickerDataForDayIndex(self.symbolData, symbol, currentDayIndex)
             purchasePrice = currentTickerData[3]
-            percentTrigger = self.percentageDelta #+ 0.1 #- 0.01
+            percentTrigger = self.percentageDelta * 2 #+ 0.1 #- 0.01
             thresholdPrice = purchasePrice * (1 - (percentTrigger))
             stopLossActivated = -1
             dayCounter = 1 # plus because of transitionDayIndexes.pop(0) 
@@ -312,13 +314,16 @@ class WeathermanTimelineSimulator:
 
 
     def realizeTrades(self, dayIndex):
+        retValue = False
         if dayIndex in self.dayIndexToExecutedTrades:
+            retValue = True
             priceUpdateConfig = self.dayIndexToExecutedTrades[dayIndex]
             priceUpdates = priceUpdateConfig['priceUpdates']
             priceUpdateConfig['isRealized'] = True
             for priceUpdate in priceUpdates: 
                 self.purse += priceUpdate
 
+        return retValue
 
 
     def letsDance(self):
@@ -332,7 +337,7 @@ class WeathermanTimelineSimulator:
         processedDaIndexes = set()
         divisor = 1
         countLimit = int((len(self.orderedDayIndexes))/divisor)
-        # countLimit = int((len(self.orderedDayIndexes))/2)
+        self.firstProccessedDayIndex = self.orderedDayIndexes[indexCounter]
         while indexCounter < countLimit:
             dayIndex = self.orderedDayIndexes[indexCounter]
             processedDaIndexes.add(dayIndex)
@@ -357,12 +362,16 @@ class WeathermanTimelineSimulator:
 
 
         countLimit = int((len(self.orderedDayIndexes)))
+        self.lastProccessedDayIndex = self.orderedDayIndexes[indexCounter - 1]
         while indexCounter < countLimit:
             dayIndex = self.orderedDayIndexes[indexCounter]
             processedDaIndexes.add(dayIndex)
-            self.realizeTrades(dayIndex)
+            tradeIsRealized = self.realizeTrades(dayIndex)
+            if tradeIsRealized:
+                self.lastProccessedDayIndex = dayIndex
             indexCounter += 1
 
+        
         isAllRealized = True
         for tradeDayIndex in self.dayIndexToExecutedTrades:
             isAllRealized = self.dayIndexToExecutedTrades[tradeDayIndex]['isRealized']
@@ -372,8 +381,8 @@ class WeathermanTimelineSimulator:
         
 
         self.successRatio = (self.gainCounter/(self.gainCounter + self.lossCounter)) * 100
-        print("all trades were realized " + str(isAllRealized))
-        print("success ratio " + str(self.successRatio))
+        # print("all trades were realized " + str(isAllRealized))
+        # print("success ratio " + str(self.successRatio))
 
         self.averagePercentLoss = self.percentLossSum/self.lossCounter
         self.averagePercentGain = self.percentGainSum/self.gainCounter
@@ -400,15 +409,25 @@ def runMultipleSimulations(simulationCount = 500):
     stopLossFlag = False
     earlyExitFlag = False
 
+
+    numberOfDaysInYear = 365
+    sumOfNumberOfYEars = 0
     while indexCounter < simulationCount:
         moneySimulation = WeathermanTimelineSimulator(contents, indexDistribution, percentDelta, 1, symbolData = simulationInitObj.symbolData, useEarlyExit=True)
         moneySimulation.stopLossIsActive = stopLossFlag
-        moneySimulation.useEarlyExit = earlyExitFlag 
+        moneySimulation.useEarlyExit = earlyExitFlag
         moneySimulation.letsDance()
+        beginDayIndex = moneySimulation.firstProccessedDayIndex
+        endDayIndex = moneySimulation.lastProccessedDayIndex
+        dayDiff = endDayIndex - beginDayIndex
+
+        numberOfYears = dayDiff/numberOfDaysInYear
         sumOfSimulations += moneySimulation.purse
         sumOfAveragesPercentLosses += moneySimulation.averagePercentLoss
         sumOfAveragesPercentGains += moneySimulation.averagePercentGain
         indexCounter+=1
+
+        sumOfNumberOfYEars += numberOfYears
 
         if minMultiplier is None or moneySimulation.purse < minMultiplier:
             minMultiplier = moneySimulation.purse
@@ -419,12 +438,14 @@ def runMultipleSimulations(simulationCount = 500):
     averageMultiplier = sumOfSimulations/indexCounter
     averageAveragesPercentLosses = sumOfAveragesPercentLosses/indexCounter
     averageAveragesPercentGains = sumOfAveragesPercentGains/indexCounter
+    averageNumberOfYears = sumOfNumberOfYEars/indexCounter
     print('stop Loss is '+str("Active" if stopLossFlag else "Inactive"  ) )
     print('early exit is '+str("Active" if earlyExitFlag else "Inactive"  ) )
     print('average multiplier is '+str(averageMultiplier) )
     print('range of multiplier is '+str(minMultiplier)+' - ' +str(maxMultiplier))
     print('average percentage Loss is '+str(averageAveragesPercentLosses) )
     print('average percentage Gain is '+str(averageAveragesPercentGains) )
+    print('Average number of years '+str(averageNumberOfYears))
 
 
 runMultipleSimulations(200)

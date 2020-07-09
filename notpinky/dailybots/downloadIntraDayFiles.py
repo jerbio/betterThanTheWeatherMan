@@ -16,7 +16,7 @@ from libfiles.downloadstockdata import groupSymbolRequest
 intraDaySeriesType = 'TIME_SERIES_INTRADAY'
 allTheSymbols = []
 # allTheSymbols.extend(maxSymbols)
-allTheSymbols.extend(subSetOfTech[90:153])
+allTheSymbols.extend(subSetOfTech['symbols'][90:153])
 # allTheSymbols.extend(SubsetOfFinance)
 allTheSymbols = list(set(allTheSymbols))
 groupSymbolRequest(allTheSymbols, 
@@ -26,7 +26,7 @@ groupSymbolRequest(allTheSymbols,
 
 
 # groupSymbolRequest(maxSymbols, ignoreIfExists = True)
-# groupSymbolRequest(subSetOfTech, ignoreIfExists = True)
+# groupSymbolRequest(subSetOfTech['symbols'], ignoreIfExists = True)
 # groupSymbolRequest(SubsetOfFinance, ignoreIfExists = True)
 
 # runExec(downloadedSymbols)

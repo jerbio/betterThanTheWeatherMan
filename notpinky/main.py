@@ -1,6 +1,6 @@
 import datetime
 from implementations.onlypositivedeltas import runExec
-from libfiles.idealpricedsymbols import  maxSymbols, downloadedSymbols,subSetOfTech,SubsetOfFinance, turnTheKey, nasdaqPennys, healthcare
+from libfiles.idealpricedsymbols import  maxSymbols, subSetOfTech,SubsetOfFinance, nasdaqPennys, healthcare, symbolDictionary
 from libfiles.downloadstockdata import groupSymbolRequest
 import tensorflow as tf
 from turnkey import generateModel, loadLatestModel, turnTheKey
@@ -15,6 +15,8 @@ from weathermanpredictionconfig import WeatherManPredictionConfig
 # tf.test.is_gpu_available(cuda_only=False, min_cuda_compute_capability=None)
 
 
+config = WeatherManPredictionConfig()
+
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # import os
@@ -23,9 +25,10 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-# print("\n\n\nUsing penny stocks"); runExec(nasdaqPennys); print("\n\n\nUsing penny stocks"+str(datetime.datetime.now()))
-# print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"); runExec(subSetOfTech); print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"+str(datetime.datetime.now()))
-# print("\n\n\nUsing SubsetOfFinance dataset SubsetOfFinance"); runExec(SubsetOfFinance); print("\n\n\nUsing SubsetOfFinance dataset "+str(datetime.datetime.now()))
-print("\n\n\nUsing SubsetOfHealthCare dataset healthcare"); runExec(healthcare); print("\n\n\nUsing healthcare dataset "+str(datetime.datetime.now()))
-# print("\n\n\nUsing downloadedSymbols dataset"); runExec(maxSymbols[:50]); print("\n\n\nUsing downloadedSymbols dataset"+str(datetime.datetime.now()))
+print("\n\n\nUsing SubsetOfHealthCare dataset healthcare"); runExec(config, symbolDictionary[config.category][config.exchange]); print("\n\n\nUsing healthcare dataset "+str(datetime.datetime.now()))
+
+# print("\n\n\nUsing penny stocks"); runExec(nasdaqPennys['symbols']); print("\n\n\nUsing penny stocks"+str(datetime.datetime.now()))
+# print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"); runExec(subSetOfTech['symbols']); print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"+str(datetime.datetime.now()))
+# print("\n\n\nUsing SubsetOfFinance dataset SubsetOfFinance"); runExec(SubsetOfFinance['symbols']); print("\n\n\nUsing SubsetOfFinance dataset "+str(datetime.datetime.now()))
+# print("\n\n\nUsing SubsetOfHealthCare dataset healthcare"); runExec(config, healthcare['symbols']); print("\n\n\nUsing healthcare dataset "+str(datetime.datetime.now()))
 # # runExec(["AAPL"])

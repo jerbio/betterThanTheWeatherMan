@@ -1613,8 +1613,9 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
 
 
-def runExec(tickerSymbols = None):
-    config = WeatherManPredictionConfig()
+def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
+    if config is None:
+        config = WeatherManPredictionConfig()
     config.iterationNotes = ''''''
     
     # getStocks(tickerSymbols)

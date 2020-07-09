@@ -27,7 +27,7 @@ config = WeatherManPredictionConfig()
 # config.isOverSampled = False
 # config.allowInflectionPoints = False
 # config.allowOtherDayFeatures = False
-generateModel(liveConfig, subSetOfTech, True)
+generateModel(liveConfig, subSetOfTech['symbols'], True)
 liveConfig.allowInflectionPoints = True
 liveConfig.allowOtherDayFeatures = True
-generateModel(liveConfig, subSetOfTech, False)
+generateModel(liveConfig, subSetOfTech['symbols'], False)

@@ -205,7 +205,7 @@ def evaluateDistribution(dayIndexToTickerData):
     plt.show()
 
 
-dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], subSetOfTech, stockFlag=0)
+dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], subSetOfTech['symbols'], stockFlag=0)
 
 evaluateDistribution(dayIndexToTickerData)
 pass
