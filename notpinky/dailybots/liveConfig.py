@@ -22,3 +22,5 @@ liveConfig.isOverSampled = False
 liveConfig.allowInflectionPoints = False
 liveConfig.allowOtherDayFeatures = False
 liveConfig.modelRebuildCount = 5
+liveConfig.category = 'tech'
+liveConfig.exchange = 'nyse'

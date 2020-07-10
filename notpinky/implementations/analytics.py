@@ -17,10 +17,10 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexes
 from libfiles.loaddataseries import load_time_series_daily
-from libfiles.idealpricedsymbols import subSetOfTech
+from libfiles.idealpricedsymbols import subSetOfTech, healthcare
 
 
-def getTrafficTape(filePath='.\\notpinky\\datafiles\\simultationtape.txt'):
+def getTrafficTape(filePath='.\\datafiles\\simultationtape.txt'):
     # filePath = 
     file = open(filePath, "r")
     dictionaryString = file.read()
@@ -83,8 +83,8 @@ def getTrafficTape(filePath='.\\notpinky\\datafiles\\simultationtape.txt'):
         }
 
 
-    plt.plot(dayIndexes, completionRates)
-    plt.show()
+    # plt.plot(dayIndexes, completionRates)
+    # plt.show()
 
     return {'completionRateGraph': completionRateGraph, 'percentageDistribution': percentageDistribution}
 
@@ -205,7 +205,7 @@ def evaluateDistribution(dayIndexToTickerData):
     plt.show()
 
 
-dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], subSetOfTech['symbols'], stockFlag=0)
+dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], healthcare['symbols'], stockFlag=0)
 
 evaluateDistribution(dayIndexToTickerData)
 pass

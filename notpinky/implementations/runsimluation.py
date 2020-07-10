@@ -335,7 +335,7 @@ class WeathermanTimelineSimulator:
         # indexCounter = 0
         # indexCounter = int(dayIndexCounter/2)
         processedDaIndexes = set()
-        divisor = 1
+        divisor = 2
         countLimit = int((len(self.orderedDayIndexes))/divisor)
         self.firstProccessedDayIndex = self.orderedDayIndexes[indexCounter]
         while indexCounter < countLimit:
@@ -381,8 +381,8 @@ class WeathermanTimelineSimulator:
         
 
         self.successRatio = (self.gainCounter/(self.gainCounter + self.lossCounter)) * 100
-        # print("all trades were realized " + str(isAllRealized))
-        # print("success ratio " + str(self.successRatio))
+        print("all trades were realized " + str(isAllRealized))
+        print("success ratio " + str(self.successRatio))
 
         self.averagePercentLoss = self.percentLossSum/self.lossCounter
         self.averagePercentGain = self.percentGainSum/self.gainCounter

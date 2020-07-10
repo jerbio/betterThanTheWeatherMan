@@ -22,12 +22,13 @@ class WeatherManPredictionConfig:
         self.highValueStocks = False
         self.allowInflectionPoints = False
         self.allowOtherDayFeatures = True
-        self.modelFolderPath = './savedmodels'
-        self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
-        self.predictionFolder = './predictionDump'
-        self.predictionFolderTurnedKey = self.predictionFolder + '/lightningStrikes'
+        self.category = 'tech'
         self.exchange = 'nyse'
-        self.category = 'health'
+        self.modelFolderPath = './savedmodels'+'/'+self.category+'/'+self.exchange
+        self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
+        self.predictionFolder = './predictionDump'+'/'+self.category+'/'+self.exchange
+        self.predictionFolderTurnedKey = self.predictionFolder + '/lightningStrikes'
+        
         self.preClosingMinuteSpan = 15 # The number of minutes from 'now' that'll be used to exrapolate the closing price. Assuming the curent time is currently 2:30p and this property is set to 15 min this till select ticker data between 2:15p and 2:30p to extrapolate the closing price
         self.isOverSampled = False
 

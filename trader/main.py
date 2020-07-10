@@ -20,4 +20,6 @@ from stockpicker import StockPicker
 
 botTrader = Trader()
 botTrader.addToAvoidedStocks("bcov")
+botTrader.addToAvoidedStocks("egan")
+botTrader.addToAvoidedStocks("ssys")
 botTrader.endOfDayTrade()
