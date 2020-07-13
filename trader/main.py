@@ -22,4 +22,9 @@ botTrader = Trader()
 botTrader.addToAvoidedStocks("bcov")
 botTrader.addToAvoidedStocks("egan")
 botTrader.addToAvoidedStocks("ssys")
-botTrader.endOfDayTrade()
+botTrader.addToAvoidedStocks("comm")
+# botTrader.endOfDayTrade()
+activeOrders = botTrader.getInvestedStockPositions();
+pendingOrders = botTrader.getPendingOrders();
+botTrader.testRequest();
+

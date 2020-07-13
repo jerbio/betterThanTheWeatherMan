@@ -40,7 +40,8 @@ class StockPicker:
         # pathPrefix = '../notpinky/'
         # fullFolderPath = pathPrefix+self.config.predictionFolderTurnedKey
         # fullFolderPath = str(Path(fullFolderPath))
-        predictions = load_prediction()
+        filePath = str(Path('./notpinky/'+self.config.predictionFolder))
+        predictions = load_prediction(filePath)
         retValue = self.setTodayFlag(predictions)
         return retValue
         

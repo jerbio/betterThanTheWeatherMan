@@ -17,7 +17,8 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexes
 from libfiles.loaddataseries import load_time_series_daily
-from libfiles.idealpricedsymbols import subSetOfTech, healthcare
+from libfiles.idealpricedsymbols import subSetOfTech, healthcare, symbolDictionary
+from weathermanpredictionconfig import WeatherManPredictionConfig
 
 
 def getTrafficTape(filePath='.\\datafiles\\simultationtape.txt'):
@@ -163,6 +164,7 @@ def evaluateDistribution(dayIndexToTickerData):
 
     for dayIndex in dayIndexToTickerData:
         dayIndexToSubsequentTickers = dayIndexToTickerData[dayIndex]
+        swingBackForDayIndex = {}
         for symbol in dayIndexToSubsequentTickers:
             allTickerData = []
             subSequentDayTickerData = dayIndexToSubsequentTickers[symbol]
@@ -181,7 +183,9 @@ def evaluateDistribution(dayIndexToTickerData):
                     subsequentDayHighPrice = tickerData[2]
                     if subsequentDayHighPrice < successTradePrice:
                         percentDelta = ((subsequentDayLowPrice - tradeDayClosePrice)/tradeDayClosePrice) * 100
-                        percentDeltaFloor = math.floor(percentDelta)
+                        percentDeltaFloor = math.ceil(percentDelta)
+                        beginSwingBackIndex = percentDeltaFloor + 1
+                        swingBackIndexes = list(range(beginSwingBackIndex, 0))
                         if percentDeltaFloor not in percentDistribution:
                             percentDistribution[percentDeltaFloor] = 0
                     else:
@@ -204,8 +208,10 @@ def evaluateDistribution(dayIndexToTickerData):
     plt.plot(percentFloors, percentCardinality)
     plt.show()
 
+config = WeatherManPredictionConfig()
+config.category = 'health'
 
-dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], healthcare['symbols'], stockFlag=0)
+dayIndexToTickerData = stopLossAssesment(graphData['completionRateGraph'], graphData['percentageDistribution'], symbolDictionary[config.category][config.exchange], stockFlag=0)
 
 evaluateDistribution(dayIndexToTickerData)
 pass

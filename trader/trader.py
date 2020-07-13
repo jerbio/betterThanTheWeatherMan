@@ -31,8 +31,8 @@ class Trader:
         self.robinhood = r
         self.excludedStocks = set()
         self.loadCredentials()
-        config = WeatherManPredictionConfig()
-        self.stockPicker = StockPicker(config)
+        self.config = WeatherManPredictionConfig()
+        self.stockPicker = StockPicker(self.config)
         self.robinhoodStatus()
         
         
@@ -119,6 +119,36 @@ class Trader:
                     isTodayStocks.append(predictionStock)
         
         self.buyStocks(isTodayStocks)
+
+    def getInvestedStockPositions(self):
+        currentPossiblePositions = self.robinhood.build_holdings()
+        retValue = {}
+        for symbol in currentPossiblePositions:
+            position = currentPossiblePositions[symbol]
+            if float(position['equity']) != 0:
+                retValue[symbol] = position
+        
+        return retValue
+
+    
+    def getPendingOrders(self):
+        currentPossiblePositions = self.robinhood.build_holdings()
+        retValue = {}
+        for symbol in currentPossiblePositions:
+            position = currentPossiblePositions[symbol]
+            if float(position['equity']) == 0:
+                retValue[symbol] = position
+        
+        return retValue
+
+
+    def testRequest(self):
+        investmentProfile = self.robinhood.load_investment_profile()
+        self.robinhood.load_portfolio_profile()
+        self.robinhood.build_holdings()
+        self.robinhood.build_user_profile()
+
+        print("where are we")
 
 
 
