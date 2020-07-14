@@ -1,1 +1,1 @@
-"python.exe" "C:\Users\jerom\Documents\workspace\python\betterthantheweatherman\notpinky\dailybots\downloadEndOfDayPrices.py"
+"python.exe" "C:\Users\jerom\Documents\workspace\projects\weatherman\compute\notpinky\dailybots\downloadEndOfDayPrices.py"

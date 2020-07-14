@@ -3,6 +3,7 @@ import tensorflow as tf
 
 class WeatherManPredictionConfig:
     def __init__(self): 
+        self.id = ''
         self.epochCount = 200
         self.daysPerYear = 365
         self.percentageDeltaChange = 3

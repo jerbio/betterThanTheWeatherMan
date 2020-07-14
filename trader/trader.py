@@ -57,12 +57,16 @@ class Trader:
         print("Buying power is :" + str(buyPower))
         return buyPower
 
-    def buyStocks(self, symbols, purseValue = None):
+    def buyStocksByPredictionDump(self, predictionSymbols, purseValue = None):
         allowedSymbols = set()
-        for eachSymbol in symbols:
+        for eachSymbol in predictionSymbols:
             if eachSymbol['symbol'] not in self.excludedStocks:
                 allowedSymbols.add(eachSymbol['symbol'])
 
+        self.buyStocks(predictionSymbols, purseValue)
+
+    def buyStocks(self, symbols, purseValue = None):
+        allowedSymbols = set(symbols)
         if purseValue is None:
             purseValue = float(self.getBuyingPower())
         if purseValue > 0:
@@ -76,6 +80,7 @@ class Trader:
                         latestPrice = latestStockInfo[0]['last']
                         limitPrice = latestPrice
                         self.buyStockByBudget(symbol, purserPerStockSymbol, limitPrice)
+
 
     def buyStockByBudget(self, stockSymbol, orderBudget, limitPrice = None):
         pricePerStock = limitPrice
@@ -118,7 +123,7 @@ class Trader:
                 if predictionStock['isToday'] is True:
                     isTodayStocks.append(predictionStock)
         
-        self.buyStocks(isTodayStocks)
+        self.buyStocksByPredictionDump(isTodayStocks)
 
     def getInvestedStockPositions(self):
         currentPossiblePositions = self.robinhood.build_holdings()

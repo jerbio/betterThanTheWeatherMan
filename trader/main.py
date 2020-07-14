@@ -21,10 +21,16 @@ from stockpicker import StockPicker
 botTrader = Trader()
 botTrader.addToAvoidedStocks("bcov")
 botTrader.addToAvoidedStocks("egan")
-botTrader.addToAvoidedStocks("ssys")
-botTrader.addToAvoidedStocks("comm")
-# botTrader.endOfDayTrade()
-activeOrders = botTrader.getInvestedStockPositions();
-pendingOrders = botTrader.getPendingOrders();
-botTrader.testRequest();
+stocks = list()
+# stocks.append("PLAB")
+# stocks.append("BNFT")
+# stocks.append("ICHR")
+# stocks.append("AOSL")
+# stocks.append("CRTO")
+# stocks.append("VNET")
+# botTrader.buyStocks(stocks)
+botTrader.endOfDayTrade()
+# activeOrders = botTrader.getInvestedStockPositions();
+# pendingOrders = botTrader.getPendingOrders();
+# botTrader.testRequest();
 

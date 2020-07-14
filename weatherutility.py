@@ -51,18 +51,18 @@ def load_prediction(predicitonFilePath = None):
     defaultFolderPath = ".\\notpinky\\predictionDump\\lightningStrikes\\"
     filePath = predicitonFilePath
     retValue = None
+    walk = os.walk
     if predicitonFilePath is None:
-        walk = os.walk
         predicitonFilePath = str(Path(defaultFolderPath))
         filePath = predicitonFilePath
-        predictionFolderNames = []
-        for (dirpath, dirnames, filenames) in walk(predicitonFilePath):
-            predictionFolderNames.extend(list(dirnames))
+    predictionFolderNames = []
+    for (dirpath, dirnames, filenames) in walk(predicitonFilePath):
+        predictionFolderNames.extend(list(dirnames))
 
-        sortedPredictionFolderNames = sorted(predictionFolderNames, reverse = True)
-        if len(sortedPredictionFolderNames) > 0:
-            filePath += "\\" + sortedPredictionFolderNames[0]
-            filePath += '\\prediction.json'
+    sortedPredictionFolderNames = sorted(predictionFolderNames, reverse = True)
+    if len(sortedPredictionFolderNames) > 0:
+        filePath += "\\" + sortedPredictionFolderNames[0]
+        filePath += '\\prediction.json'
 
     with open(filePath) as f:
         retValue = json.load(f)

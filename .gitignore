@@ -4,6 +4,7 @@
 */EstimateTrainingData/*
 */libfiles/temp/lastBatch.txt
 */savedmodels/*
+*savedmodels*
 */logs/*
 */predictionDump/*
 datafiles/*

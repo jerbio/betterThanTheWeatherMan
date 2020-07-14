@@ -1,6 +1,6 @@
-cd "C:\Users\jerom\Documents\workspace\python\betterthantheweatherman\notpinky\"
+cd "C:\Users\jerom\Documents\workspace\projects\weatherman\compute\notpinky\"
 
-"python.exe" "C:\Users\jerom\Documents\workspace\python\betterthantheweatherman\notpinky\dailybots\builddailymodel.py"
+"python.exe" "C:\Users\jerom\Documents\workspace\projects\weatherman\compute\notpinky\dailybots\builddailymodel.py"
 
 
 PAUSE
