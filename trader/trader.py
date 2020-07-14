@@ -63,7 +63,7 @@ class Trader:
             if eachSymbol['symbol'] not in self.excludedStocks:
                 allowedSymbols.add(eachSymbol['symbol'])
 
-        self.buyStocks(predictionSymbols, purseValue)
+        self.buyStocks(allowedSymbols, purseValue)
 
     def buyStocks(self, symbols, purseValue = None):
         allowedSymbols = set(symbols)
