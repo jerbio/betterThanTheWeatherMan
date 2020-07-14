@@ -181,13 +181,30 @@ def evaluateDistribution(dayIndexToTickerData):
                     allTickerData.extend(tickerData)
                     subsequentDayLowPrice = tickerData[1]
                     subsequentDayHighPrice = tickerData[2]
+
+                    for percentageSwing in swingBackForDayIndex:
+                        daySwingBackInfo = swingBackForDayIndex[percentageSwing]
+                        bounceBackPrice = daySwingBackInfo['bounceBackPrice']
+                        if subsequentDayHighPrice >= bounceBackPrice:
+                            daySwingBackInfo['successBounceCount']+=1
                     if subsequentDayHighPrice < successTradePrice:
                         percentDelta = ((subsequentDayLowPrice - tradeDayClosePrice)/tradeDayClosePrice) * 100
                         percentDeltaFloor = math.ceil(percentDelta)
                         beginSwingBackIndex = percentDeltaFloor + 1
-                        swingBackIndexes = list(range(beginSwingBackIndex, 0))
+                        swingBackPercentages = list(range(beginSwingBackIndex, 0))
                         if percentDeltaFloor not in percentDistribution:
                             percentDistribution[percentDeltaFloor] = 0
+                        for swingBackIndex in swingBackPercentages:
+                            if swingBackIndex not in swingBackForDayIndex:
+                                buyBackPercentage = swingBackIndex-1
+                                swingBackDelta = (abs(buyBackPercentage) + percentaageDelta)
+                                bounceBackPrice = tradeDayClosePrice * (((100 + (buyBackPercentage))/100)) * (1 + swingBackDelta/100)
+                                swingBackForDayIndex[swingBackIndex] = {
+                                    'successBounceCount': 0,
+                                    'totalDayCount': 0,
+                                    'bounceBackPrice': bounceBackPrice
+                                }
+
                     else:
                         break
                     
