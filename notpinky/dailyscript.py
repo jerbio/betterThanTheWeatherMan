@@ -20,8 +20,6 @@ allTheSymbols = list(set(allTheSymbols))
 beforeDownloadTime = datetime.datetime.now()
 
 
-
-
 groupSymbolRequest(allTheSymbols,
     filePath = str(Path('../EstimateTrainingData/StockDump/'))
     ,series_type=intraDaySeriesType

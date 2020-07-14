@@ -23,4 +23,4 @@ liveConfig.allowInflectionPoints = False
 liveConfig.allowOtherDayFeatures = False
 liveConfig.modelRebuildCount = 5
 liveConfig.category = 'tech'
-liveConfig.exchange = 'nyse'
+liveConfig.exchange = 'nasdaq'

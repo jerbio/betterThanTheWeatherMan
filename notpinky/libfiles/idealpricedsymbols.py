@@ -5,12 +5,12 @@ maxSymbols = {
     }
 subSetOfTech = {
     'category': 'tech',
-    'exchange': 'nyse',
+    'exchange': 'nasdaq',
     'symbols': ["GOOG","ADBE","ASML","NVDA","AAPL","LRCX","ANSS","AVGO","INTU","TTD","VRSN","ZBRA","FB","MPWR","MSFT","COUP","JKHY","SNPS","TEAM","VRSK","CTXS","TECD","WIX","SPLK","MSTR","TTWO","FFIV","EVBG","PFPT","IPGP","CCMP","QLYS","CHKP","APPF","SEDG","FTNT","BIDU","FIVN","AZPN","FISV","CYBR","POWI","SLAB","NXPI","XLNX","PCTY","LOGM","MTCH","MCHP","PEGA","JCOM","QCOM","OSIS","CERN","OMCL","ACIA","CRUS","JOBS","INFO","VRNS","PLUS","SYNA","YY","RP","GDS","BL","MANH","CTSH","MXIM","AMAT","AMBA","SSNC","MGRC","SPSC","BLKB","STX","CSGS","LOGI","RPD","ALRM","SIMO","BBSI","CVLT","FSLR","CSCO","VSAT","VRNT","NTAP","ENPH","EPAY","PRGS","CREE","OTEX","NATI","MIME","WB","TTEC","YNDX","BRKS","PRFT","VRTU","CSOD","KFRC","UPLD","SYKE","MRVL","SANM","MTSI","NTCT","HSTM","SPNS","HSII","TLND","MOMO","CPSI","LPSN","FORM","ICHR","ACLS","TWOU","MTLS","TSEM","DSPG","INOV","VNET","NTNX","RCII","CSIQ","PDFS","SSYS","ITRN","UCTT","RMBS","IOTS","PLAB","FEYE","SCWX","ALLT","TTMI","BNFT","DGII","COMM","VECO","AOSL","CRTO","AMKR","MGIC","BCOV","AAOI","KVHI","EGAN","GLUU"]
     }
 SubsetOfFinance = {
     'category': 'finance',
-    'exchange': 'nyse',
+    'exchange': 'nasdaq',
     'symbols': ["TROW","SBNY","EEFT","SAFT","CNBKA","AMSF","HLNE","WRLD","LPLA","SEIC","GSHD","GSBC","AMTD","FSBW","BANF","JRVR","RBCAA","VALU","SFBS","PFG","FIBK","WEBK","TBNK","COLB","PRAA","BFYT","GNTY","VIRT","IBTX","STFC","TCBI","FBNC","ABTX","TBK","CG","MBWM","ABCB","HMST","OBNK","FOCS","RDFN","ICBK","PUB","OFED","IROQ","EQBK","CBTX","FISI","FHB","LEVL","CASH","MSBI","BWFG","VCTR","ESQ","HTBI","CLBK","VBTX","MBIN","CCB","MYFW","DGICB","PCSB","HOMB","LOB","ATLC","TSC","MSVB","CBMB","NODK","RBB","ARYAU","ASFI","GPAQ","NMIH","HVBC","ISTR","PFBI","BCML","HCCHU","OBAS","CFFAU","WINS","NEBUU","BRPAU","KBLM","BRPA","LOAC","OPESU","OPES","TZAC","LOACU","ARYA","TOTA","TDACU","FMCIU","TDAC","HCCH","ALAC","TOTAU","PACQ","ALACU","FTACU","FMCI","LACQ","TZACU","NWBI","LFAC","ICCH","SAMAU","CBNK","AMCIU","LFACU","GPAQU","NEBU","AMCI","LACQU","FNWB","STXB","AMHC","LBC","BCBP","CSTR","BWB","SAMG","PVBC","RNDB","FFBW","PDLB","LX","GWGH","PCB","HONE","QFIN","CFBI","BSVN","OPBK","IGIC","GLRE","MRLN","YIN","JRJC","PIH","CNFR"]
     }
 nasdaqPennys = {
@@ -20,7 +20,7 @@ nasdaqPennys = {
     }
 healthcare = {
     'category': 'health',
-    'exchange': 'nyse',
+    'exchange': 'nasdaq',
     'symbols': ["KALV","TBIO","ANGO","GNMK","CNCE","VIVO","VYGR","XENT","BNTC","OPGNW","VNDA","SRRA","OXFD","XENE","SNDX","FOLD","BYSI","DMTK","NLTX","ADVM","CLLS","CORT","ARAV","AHPI","GTHX","CUTR","XBIT","CODX","LNTH","AERI","CGEN","NTLA","MYGN","NRBO","PDCO","OMER","CYTK","FLGT","ALKS","ANAB","CARA","LAKE","MRUS","AMPH","CHRS","AIMT","RDUS","RCKT","RVNC","BLPH","FONR","EPZM","AKCA","SUPN","RYTM","COLL","ARCT","IRMD","DRNA","HCM","DNLI","PAHC","PETQ","URGN","TARA","HCSG","VCYT","EDIT","XOMA","CDNA","EYE","KPTI","EXEL","LMAT","ODT","ZGNX","XNCR","WMGI","FATE","NSTG","MNTA","OFIX","HZNP","LMNX","ZEAL","APLS","NTRA","SAGE","SRDX","ENSG","RGNX","XRAY","ATRC","PCRX","ESPR","FGEN","UFPT","CSII","KIDS","BEAT","AGIO","HOLX","DCPH","CCXI","ACAD","ARNA","PTCT","KRYS","INGN","SYNH","EGRX","HSIC","CRSP","ENTA","TCMD","BLUE","QURE","NUVA","MYOK","NEOG","RARE","CNMD","ZLAB","HSKA","BPMC","AXSM","GBT","NVCR","EXAS","TNDM","GILD","ADUS","ICPT","MEDP","PRAH","BMRN","XLRN","NBIX","IRTC","ALXN","JAZZ","GWPH","UTHR","RGEN","LHCG","ASND","SGEN","ALNY","ARGX","ICLR","RETA","BGNE","ALGN","MASI","PODD","GLPG","ICUI","AMGN","VRTX","IDXX","DXCM","ISRG","REGN"]
     }
 turnTheKey = list(subSetOfTech['symbols'][90: 153])

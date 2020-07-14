@@ -28,7 +28,21 @@ from justdownload import downloadDaily, downloadIntraDay
 # config.allowInflectionPoints = False
 # config.allowOtherDayFeatures = False
 
-generateModel(liveConfig, symbolDictionary[liveConfig.category][liveConfig.exchange], True)
-liveConfig.allowInflectionPoints = True
-liveConfig.allowOtherDayFeatures = True
-generateModel(liveConfig, symbolDictionary[liveConfig.category][liveConfig.exchange], False)
+
+def generateModelByConfig(liveConfig, category, exchange):
+    liveConfig.category = category
+    liveConfig.exchange = exchange
+    liveConfig.allowInflectionPoints = False
+    liveConfig.allowOtherDayFeatures = False
+    generateModel(liveConfig, symbolDictionary[liveConfig.category][liveConfig.exchange], True)
+    liveConfig.allowInflectionPoints = True
+    liveConfig.allowOtherDayFeatures = True
+    generateModel(liveConfig, symbolDictionary[liveConfig.category][liveConfig.exchange], False)
+
+stockGrouping = [('tech','nasdaq'),('health','nasdaq')]
+
+for entry in stockGrouping:
+    category = entry[0]
+    exchange = entry[1]
+    generateModelByConfig(liveConfig, category, exchange)
+
