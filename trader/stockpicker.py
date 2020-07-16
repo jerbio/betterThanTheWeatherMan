@@ -38,9 +38,9 @@ class StockPicker:
 
     def getLatestStocksLocal(self):
         # pathPrefix = '../notpinky/'
-        # fullFolderPath = pathPrefix+self.config.predictionFolderTurnedKey
+        # fullFolderPath = pathPrefix+self.config.predictionFolderTurnedKey()
         # fullFolderPath = str(Path(fullFolderPath))
-        filePath = str(Path('./notpinky/'+self.config.predictionFolder))
+        filePath = str(Path('./notpinky/'+self.config.predictionFolder()))
         predictions = load_prediction(filePath)
         retValue = self.setTodayFlag(predictions)
         return retValue

@@ -1310,7 +1310,8 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
                     stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
 
-            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:50]
+            subSetCount = int(len(stockDataWithinWindow)/3)
+            sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:subSetCount]
 
             windowSymbolData = {}
             for symbolAndPrice in sortedSymbolDataByPrice:
@@ -1622,9 +1623,6 @@ def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.highValueStocks = False
-    config.allowInflectionPoints = True
-    config.allowOtherDayFeatures = True
     config.percentageDeltaChange = 3
     config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
@@ -1634,10 +1632,10 @@ def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     config.printMe()
     currentTime = datetime.datetime.now()
     
-    # earliestTime = datetime.datetime.strptime('2018-08-08 00:00:00', '%Y-%m-%d %H:%M:%S')
+    # earliestTime = datetime.datetime.strptime('2019-02-06 00:00:00', '%Y-%m-%d %H:%M:%S')
     
     # earliestTimeDayIndex = dayIndexFromTime(earliestTime)
-    # earliestTimeDayIndex -= (config.numberOfDaysWithPossibleResult - 1)
+    # earliestTimeDayIndex -= (config.numberOfDaysWithPossibleResult+ 1)
     # earliestTime = timeFromDayIndex(earliestTimeDayIndex)
 
 

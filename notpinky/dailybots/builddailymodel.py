@@ -30,6 +30,8 @@ from justdownload import downloadDaily, downloadIntraDay
 
 
 def generateModelByConfig(liveConfig, category, exchange):
+    liveConfig.epochCount = 200
+    liveConfig.modelRebuildCount = 5
     liveConfig.category = category
     liveConfig.exchange = exchange
     liveConfig.allowInflectionPoints = False
@@ -39,7 +41,7 @@ def generateModelByConfig(liveConfig, category, exchange):
     liveConfig.allowOtherDayFeatures = True
     generateModel(liveConfig, symbolDictionary[liveConfig.category][liveConfig.exchange], False)
 
-stockGrouping = [('tech','nasdaq'),('health','nasdaq')]
+stockGrouping = [('tech','nasdaq'),('health','nasdaq'),('finance','nyse')]
 
 for entry in stockGrouping:
     category = entry[0]

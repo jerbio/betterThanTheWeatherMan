@@ -24,8 +24,13 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 # physical_devices = tf.config.list_physical_devices('GPU') 
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-
-print("\n\n\nUsing SubsetOfHealthCare dataset healthcare"); runExec(config, symbolDictionary[config.category][config.exchange]); print("\n\n\nUsing healthcare dataset "+str(datetime.datetime.now()))
+config.category = 'finance'
+config.exchange = 'nyse'
+config.allowInflectionPoints = True
+config.allowOtherDayFeatures = True
+print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nBegan At"); 
+runExec(config, symbolDictionary[config.category][config.exchange])
+print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nEnded At"+str(datetime.datetime.now()))
 
 # print("\n\n\nUsing penny stocks"); runExec(nasdaqPennys['symbols']); print("\n\n\nUsing penny stocks"+str(datetime.datetime.now()))
 # print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"); runExec(subSetOfTech['symbols']); print("\n\n\nUsing subSetOfTech dataset subSetOfTech[90:]"+str(datetime.datetime.now()))

@@ -70,9 +70,9 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
                     
             currentTime = datetime.datetime.now()
             timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')
-            predictionFolderPath = config.predictionFolder
+            predictionFolderPath = config.predictionFolder()
             if isAuto:
-                predictionFolderPath = config.predictionFolderTurnedKey
+                predictionFolderPath = config.predictionFolderTurnedKey()
             predictionFolderPath += '/prediction_'+ timeString +''
 
             predictionFileName = 'prediction.json'
@@ -95,9 +95,9 @@ def turnTheKey(config:WeatherManPredictionConfig, tickerSymbols, isAuto = True):
 
 
 def loadLatestModel(config:WeatherManPredictionConfig, isAuto = False):
-    modelFolder = config.modelFolderPath
+    modelFolder = config.modelFolderPath()
     if isAuto:
-        modelFolder = config.modelFolderPathTurnedKey
+        modelFolder = config.modelFolderPathTurnedKey()
     folderPaths = {}
     walk = os.walk;
     for (dirpath, dirnames, fileNames) in walk(modelFolder):
@@ -113,13 +113,13 @@ def loadLatestModel(config:WeatherManPredictionConfig, isAuto = False):
 
     modelFileName = 'model'
     modelFileNamePath = str(Path(modelFolder+'/'+latestFolderName+'/'+modelFileName))
+    print("Loading model from  model to path "+ str(modelFileNamePath))
     retValue = tf.keras.models.load_model(modelFileNamePath)
     retValue.summary()
     return retValue
 
 
 def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = False):
-    config.epochCount = 200
     currentTime = datetime.datetime.now()
     config.printMe()
         
@@ -161,9 +161,9 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
     predictionStartTime = finalTime
     predictionDayIndex = dayIndexFromTime(predictionStartTime)
     timeString = currentTime.strftime('%Y_%m_%dT%H_%M_%S_%fZ')
-    modelFolderPath = config.modelFolderPath
+    modelFolderPath = config.modelFolderPath()
     if isAuto:
-        modelFolderPath = config.modelFolderPathTurnedKey
+        modelFolderPath = config.modelFolderPathTurnedKey()
     modelFolderPath += '/model_'+ timeString +''
 
     modelConfig = {
@@ -181,6 +181,7 @@ def generateModel(config:WeatherManPredictionConfig, tickerSymbols, isAuto = Fal
             if exc.errno != errno.EEXIST:
                 raise
 
+    print("Writing model to path "+ str(configFileNamePath))
     with open(configFileNamePath, 'w') as outfile:
         json.dump(modelConfig, outfile)
 

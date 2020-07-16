@@ -6,7 +6,7 @@ maxSymbols = {
 subSetOfTech = {
     'category': 'tech',
     'exchange': 'nasdaq',
-    'symbols': ["GOOG","ADBE","ASML","NVDA","AAPL","LRCX","ANSS","AVGO","INTU","TTD","VRSN","ZBRA","FB","MPWR","MSFT","COUP","JKHY","SNPS","TEAM","VRSK","CTXS","TECD","WIX","SPLK","MSTR","TTWO","FFIV","EVBG","PFPT","IPGP","CCMP","QLYS","CHKP","APPF","SEDG","FTNT","BIDU","FIVN","AZPN","FISV","CYBR","POWI","SLAB","NXPI","XLNX","PCTY","LOGM","MTCH","MCHP","PEGA","JCOM","QCOM","OSIS","CERN","OMCL","ACIA","CRUS","JOBS","INFO","VRNS","PLUS","SYNA","YY","RP","GDS","BL","MANH","CTSH","MXIM","AMAT","AMBA","SSNC","MGRC","SPSC","BLKB","STX","CSGS","LOGI","RPD","ALRM","SIMO","BBSI","CVLT","FSLR","CSCO","VSAT","VRNT","NTAP","ENPH","EPAY","PRGS","CREE","OTEX","NATI","MIME","WB","TTEC","YNDX","BRKS","PRFT","VRTU","CSOD","KFRC","UPLD","SYKE","MRVL","SANM","MTSI","NTCT","HSTM","SPNS","HSII","TLND","MOMO","CPSI","LPSN","FORM","ICHR","ACLS","TWOU","MTLS","TSEM","DSPG","INOV","VNET","NTNX","RCII","CSIQ","PDFS","SSYS","ITRN","UCTT","RMBS","IOTS","PLAB","FEYE","SCWX","ALLT","TTMI","BNFT","DGII","COMM","VECO","AOSL","CRTO","AMKR","MGIC","BCOV","AAOI","KVHI","EGAN","GLUU"]
+    'symbols': ["GOOG","ADBE","ASML","NVDA","AAPL","LRCX","ANSS","AVGO","INTU","TTD","VRSN","ZBRA","FB","MPWR","MSFT","COUP","JKHY","SNPS","TEAM","VRSK","CTXS","TECD","WIX","SPLK","MSTR","TTWO","FFIV","EVBG","PFPT","IPGP","CCMP","QLYS","CHKP","APPF","SEDG","FTNT","BIDU","FIVN","AZPN","FISV","CYBR","POWI","SLAB","NXPI","XLNX","PCTY","LOGM","MTCH","MCHP","PEGA","JCOM","QCOM","OSIS","CERN","OMCL","ACIA","CRUS","JOBS","INFO","VRNS","PLUS","SYNA","YY","RP","GDS","BL","MANH","CTSH","MXIM","AMAT","AMBA","SSNC","MGRC","SPSC","BLKB","STX","CSGS","LOGI","RPD","ALRM","SIMO","BBSI","CVLT","FSLR","CSCO","VSAT","VRNT","NTAP","ENPH","EPAY","PRGS","CREE","OTEX","NATI","MIME","WB","TTEC","YNDX","BRKS","PRFT","VRTU","CSOD","KFRC","UPLD","SYKE","MRVL","SANM","MTSI","NTCT","HSTM","SPNS","HSII","TLND","MOMO","CPSI","LPSN","FORM","ICHR","ACLS","TWOU","MTLS","TSEM","DSPG","INOV","VNET","NTNX","RCII","CSIQ","PDFS","SSYS","ITRN","UCTT","RMBS","IOTS","PLAB","FEYE","SCWX","ALLT","TTMI","BNFT","DGII","COMM","VECO","AOSL","AMKR","MGIC","BCOV","AAOI","KVHI","EGAN","GLUU"]
     }
 SubsetOfFinance = {
     'category': 'finance',
@@ -23,15 +23,33 @@ healthcare = {
     'exchange': 'nasdaq',
     'symbols': ["KALV","TBIO","ANGO","GNMK","CNCE","VIVO","VYGR","XENT","BNTC","OPGNW","VNDA","SRRA","OXFD","XENE","SNDX","FOLD","BYSI","DMTK","NLTX","ADVM","CLLS","CORT","ARAV","AHPI","GTHX","CUTR","XBIT","CODX","LNTH","AERI","CGEN","NTLA","MYGN","NRBO","PDCO","OMER","CYTK","FLGT","ALKS","ANAB","CARA","LAKE","MRUS","AMPH","CHRS","AIMT","RDUS","RCKT","RVNC","BLPH","FONR","EPZM","AKCA","SUPN","RYTM","COLL","ARCT","IRMD","DRNA","HCM","DNLI","PAHC","PETQ","URGN","TARA","HCSG","VCYT","EDIT","XOMA","CDNA","EYE","KPTI","EXEL","LMAT","ODT","ZGNX","XNCR","WMGI","FATE","NSTG","MNTA","OFIX","HZNP","LMNX","ZEAL","APLS","NTRA","SAGE","SRDX","ENSG","RGNX","XRAY","ATRC","PCRX","ESPR","FGEN","UFPT","CSII","KIDS","BEAT","AGIO","HOLX","DCPH","CCXI","ACAD","ARNA","PTCT","KRYS","INGN","SYNH","EGRX","HSIC","CRSP","ENTA","TCMD","BLUE","QURE","NUVA","MYOK","NEOG","RARE","CNMD","ZLAB","HSKA","BPMC","AXSM","GBT","NVCR","EXAS","TNDM","GILD","ADUS","ICPT","MEDP","PRAH","BMRN","XLRN","NBIX","IRTC","ALXN","JAZZ","GWPH","UTHR","RGEN","LHCG","ASND","SGEN","ALNY","ARGX","ICLR","RETA","BGNE","ALGN","MASI","PODD","GLPG","ICUI","AMGN","VRTX","IDXX","DXCM","ISRG","REGN"]
     }
+nyseFinance = {
+    'category': 'finance',
+    'exchange': 'nyse',
+    'symbols': ["BLK","MSCI","GS","AMP","BAP","FRC","PNC","MTB","JPM","ICE","CLC","AMG","CFR","RJF","RY","CM","CNS","CAM","STT","COF","CBM","BOH","EVR","CBU","HLI","PB","BX","BMO","PJT","APO","MS","SF","ALR","DFS","LM","CBG","HDB","TD","PFG","TMH","BNS","ARES","AC","EV","USB","WAL","CMA","BK","SCHW","KKR","BAM","APAM","MIC","NOAH","MAIN","MC","KB","LAZ","AB","CIB","WBS","MGR","NBHC","LMHA","CFG","WFC","FSB","AFC","GEB","GEH","ISP","TCRZ","BAC","CVG","PBB","HSBC","OPY","BMA","BXS","WF","ALLY","BEN","CIT","SNV","BCH","BKU","RSE","HTH","SAR","CODI","BSAC","GEQ","TSLX","GSBD","WDR","CPF","PFS","GWB","WHG","FTAI","OFG","MCI","ASB","GBL","WBK","UBS","KEY","TCAP","CUBI","STL","GHL","IVZ","CS","RF","HTGC","BHLB","BANC","NYCB","DB","TPVG"]
+    }
+nyseInsurance = {
+    'category': 'insurance',
+    'exchange': 'nyse',
+    'symbols': ["MKL","WTM","Y","RE","AON","AGN","RNR","CB","PRI","TRV","MMC","AIZ","Q","THG","AJG","ALL","PGR","RLI","STJ","KMPR","RGA","AFG","WRB","FAF","VOYA","HCI","BRO","MCY","AXS","HIG","MET","HMN","SLF","LNC","FFG","AFL","L","ESNT","STC","IHC","CNA","FNF","PUK","AIG","EIG","HGH","RZA","AEL","THGA","AFGH","SFN","AGO","AEB","MHNC","SLW","UNM","UVE","ORI","BRP","PRA","CNO","RDN","MFC","HRTG"]
+    }
+nyseManufacturing = {
+    'category': 'manufacturing',
+    'exchange': 'nyse',
+    'symbols': ["LII","ROK","WSO","PH","ITW","CMI","DE","IEX","MMM","HON","CAT","WBC","GNRC","HUBB","BLD","CSL","VMI","KAI","PRLB","LEA","ALLE","ALG","AYI","LNN","ETN","DEL","AME","RBC","JBT","SSD","DRC","WTS","DOOR","AWI","OSK","XYL","VC","FBHS","TTC","ALV","TNC","ENS","PPS","BMI","EMR","AGCO","WAB","ITT","CR","SXI","GGG","MAS","AOS","WMS","NPO","TKR","MGA","BRC","PNR","SPXC","B","FLOW","HY","BWA","CBPX","ALSN","JCI","PLOW","EDE","BDC","CFX","GRC","AZZ","IR","FLS","HNI","RXN","NAV","FSS","MLR","KMT","MLI","CIR","HI","GBX","GSJ","CTW","DTZ","CLA","ABB","TRN","JKS","MTOR","SRI","TEX","GFF","FBR","RFT","PGTI","NWL","TG","DLPH","THR","CYD","HSC","NX","LXFR","DAN","GHM","KNL","FHY","CPS","APB","MSP","SCS","MTW","WNC"]
+    }
 turnTheKey = list(subSetOfTech['symbols'][90: 153])
 
 allTheSymbols = list(maxSymbols['symbols'])
 allTheSymbols.extend(subSetOfTech['symbols'])
 allTheSymbols.extend(SubsetOfFinance['symbols'])
 allTheSymbols.extend(nasdaqPennys['symbols'])
+allTheSymbols.extend(nyseFinance['symbols'])
+allTheSymbols.extend(nyseInsurance['symbols'])
+allTheSymbols.extend(nyseManufacturing['symbols'])
 allTheSymbols = list(set(allTheSymbols))
 
-symbolGroupings = [maxSymbols, subSetOfTech, SubsetOfFinance, nasdaqPennys, healthcare]
+symbolGroupings = [maxSymbols, subSetOfTech, SubsetOfFinance, nasdaqPennys, healthcare, nyseFinance]
 
 symbolDictionary = {}
 

@@ -24,14 +24,23 @@ class WeatherManPredictionConfig:
         self.allowInflectionPoints = False
         self.allowOtherDayFeatures = True
         self.category = 'tech'
-        self.exchange = 'nyse'
-        self.modelFolderPath = './savedmodels'+'/'+self.category+'/'+self.exchange
-        self.modelFolderPathTurnedKey = self.modelFolderPath + '/lightningStrikes'
-        self.predictionFolder = './predictionDump'+'/'+self.category+'/'+self.exchange
-        self.predictionFolderTurnedKey = self.predictionFolder + '/lightningStrikes'
+        self.exchange = 'nasdaq'
+        
         
         self.preClosingMinuteSpan = 15 # The number of minutes from 'now' that'll be used to exrapolate the closing price. Assuming the curent time is currently 2:30p and this property is set to 15 min this till select ticker data between 2:15p and 2:30p to extrapolate the closing price
         self.isOverSampled = False
+
+    def modelFolderPath(self):
+        return './savedmodels'+'/'+self.category+'/'+self.exchange
+
+    def modelFolderPathTurnedKey(self):
+        return self.modelFolderPath() + '/lightningStrikes'
+
+    def predictionFolder(self):
+        return './predictionDump'+'/'+self.category+'/'+self.exchange
+
+    def predictionFolderTurnedKey(self):
+        return self.predictionFolder() + '/lightningStrikes'
 
     def printMe(self):
         retValue =f'''
@@ -54,10 +63,10 @@ class WeatherManPredictionConfig:
         iterationNotes: {self.iterationNotes}
         previousDayDeltaCutoff: {self.previousDayDeltaCutoff}
         preClosingMinuteSpan: {self.preClosingMinuteSpan}
-        modelFolderPath: {self.modelFolderPath}
-        modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey}
-        predictionFolder: {self.predictionFolder}
-        predictionFolderTurnedKey: {self.predictionFolderTurnedKey}
+        modelFolderPath: {self.modelFolderPath()}
+        modelFolderPathTurnedKey: {self.modelFolderPathTurnedKey()}
+        predictionFolder: {self.predictionFolder()}
+        predictionFolderTurnedKey: {self.predictionFolderTurnedKey()}
         allowInflectionPoints: {self.allowInflectionPoints}
         allowOtherDayFeatures: {self.allowOtherDayFeatures}
         highValueStocks: {self.highValueStocks}

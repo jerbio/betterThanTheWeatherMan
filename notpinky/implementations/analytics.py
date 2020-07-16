@@ -98,7 +98,7 @@ graphData = getTrafficTape()
 def getTickerWithinWindow(stock, allSymbolsToTickerData, dayCount):
     symbol = stock['symbol']
     dayIndex = stock['predictionDayIndex']
-    dayIndexes = getDayIndexes(allSymbolsToTickerData, symbol, dayIndex, dayCount)
+    dayIndexes = getDayIndexes(allSymbolsToTickerData, symbol, dayIndex, dayCount+1)
     retValue = {}
     for dayIndex in dayIndexes:
         tickerData = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
@@ -106,7 +106,7 @@ def getTickerWithinWindow(stock, allSymbolsToTickerData, dayCount):
 
     return retValue
 
-dayDelta = 4
+dayDelta = 7
 percentaageDelta = 3
 
 
@@ -160,13 +160,13 @@ def evaluateDistribution(dayIndexToTickerData):
     priceDeltaSum = 0
     priceDeltaCount = 0
     percentDistribution = {}
-    swingBackSuccess = {}
+    swingBackEvaluation = {}
 
     for dayIndex in dayIndexToTickerData:
         dayIndexToSubsequentTickers = dayIndexToTickerData[dayIndex]
-        swingBackForDayIndex = {}
         for symbol in dayIndexToSubsequentTickers:
             allTickerData = []
+            swingBackForDayIndex = {}
             subSequentDayTickerData = dayIndexToSubsequentTickers[symbol]
             orderedDayIndexes = list(subSequentDayTickerData.keys())
             orderedDayIndexes.sort()
@@ -190,7 +190,7 @@ def evaluateDistribution(dayIndexToTickerData):
                     if subsequentDayHighPrice < successTradePrice:
                         percentDelta = ((subsequentDayLowPrice - tradeDayClosePrice)/tradeDayClosePrice) * 100
                         percentDeltaFloor = math.ceil(percentDelta)
-                        beginSwingBackIndex = percentDeltaFloor + 1
+                        beginSwingBackIndex = percentDeltaFloor + 2
                         swingBackPercentages = list(range(beginSwingBackIndex, 0))
                         if percentDeltaFloor not in percentDistribution:
                             percentDistribution[percentDeltaFloor] = 0
@@ -202,16 +202,40 @@ def evaluateDistribution(dayIndexToTickerData):
                                 swingBackForDayIndex[swingBackIndex] = {
                                     'successBounceCount': 0,
                                     'totalDayCount': 0,
-                                    'bounceBackPrice': bounceBackPrice
+                                    'bounceBackPrice': bounceBackPrice,
+                                    'tradeDayClosePrice': tradeDayClosePrice,
+                                    'swingBackIndex': swingBackIndex
                                 }
 
                     else:
+                        for percentageSwing in swingBackForDayIndex:
+                            daySwingBackInfo = swingBackForDayIndex[percentageSwing]
+                            bounceBackPrice = daySwingBackInfo['bounceBackPrice']
+                            if daySwingBackInfo['successBounceCount'] < 1:
+                                print("something is broken")
                         break
                     
                     percentDistribution[percentDeltaFloor] += 1
                     priceDeltaCount+=1
                     priceDeltaSum += percentDelta
 
+            for percedelta in swingBackForDayIndex:
+                cummulativeSwingInfo = {
+                        'success':0,
+                        'failure':0,
+                    }
+                swingBackResult = swingBackForDayIndex[percedelta]
+                if percedelta in swingBackEvaluation:
+                    cummulativeSwingInfo = swingBackEvaluation[percedelta]
+                else:
+                    swingBackEvaluation[percedelta] = cummulativeSwingInfo
+
+                if swingBackResult['successBounceCount'] > 0:
+                    cummulativeSwingInfo ['success'] += 1
+                else: 
+                    cummulativeSwingInfo ['failure'] += 1
+
+        bbb = 45
     lowPercentAverageDelta = priceDeltaSum/priceDeltaCount
     print('Percent delta '+ str(lowPercentAverageDelta))
     print('Percent delta distribution '+ str(percentDistribution))
