@@ -1,1 +1,0 @@
-"python.exe" "C:\Users\jerom\Documents\workspace\projects\weatherman\compute\notpinky\dailybots\downloadEndOfDayPrices.py"

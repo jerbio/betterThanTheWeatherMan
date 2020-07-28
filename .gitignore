@@ -1,10 +1,10 @@
 */LibFiles/temp/*
 */LibFiles/__pycache__/*
 */TrainingData/StockDump/*
-*/EstimateTrainingData/*
+*/estimateTrainingData/*
 */libfiles/temp/lastBatch.txt
-*/savedmodels/*
-*savedmodels*
+*/savedModels/*
+*savedModels*
 */logs/*
 */predictionDump/*
 datafiles/*

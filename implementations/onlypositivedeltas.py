@@ -2,6 +2,7 @@ import json
 import datetime
 import random
 import tensorflow as tf
+from pathlib import Path
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
@@ -24,8 +25,8 @@ physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
-from weathermanpredictionconfig import WeatherManPredictionConfig
-from weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta
+from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
+from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -1109,10 +1110,16 @@ def daysToDictionary(dayIndexes, mappings):
         retValue[dayIndex] = mappings[dayIndex]
     return retValue
 
-def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan = 15):
+def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan = 15, folderPath = None):
     retValue = {}
+    if folderPath is None:
+        savedFolder = getSavedFilesFolder()
+        if savedFolder is not None:
+            folderPath = str(Path(savedFolder+'/estimateTrainingData/StockDump/'))
+        else:
+            folderPath = str(Path('../../savedFiles/estimateTrainingData/StockDump/'))
     for symbol in tickerSymbols:
-        tickerData = load_pre_time_series(symbol, precedingMinuteSpan=precedingMinuteSpan)
+        tickerData = load_pre_time_series(symbol, precedingMinuteSpan=precedingMinuteSpan, folderPath = folderPath)
         if (tickerData):
             retValue[symbol] = tickerData
     return retValue
@@ -1120,14 +1127,18 @@ def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan
 
 def loadAllSymbolTickerDataIntoMemory(tickerSymbols):
     retValue = {}
+    savedFolder = getSavedFilesFolder()
+    if savedFolder is not None:
+        folderPath = str(Path(savedFolder+"/trainingData/StockDump"))
+    else:
+        folderPath = str(Path("../savedFiles/trainingData/StockDump"))
     for symbol in tickerSymbols:
-        tickerData = load_time_series_daily(symbol)
+        tickerData = load_time_series_daily(symbol, folderPath = folderPath)
         retValue[symbol] = tickerData
     return retValue
 
-def getAllTrainingPiecesPreClosing(config:WeatherManPredictionConfig, tickerSymbols):
-    
-    allSymbolsToTickerData = loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, config.preClosingMinuteSpan)
+def getAllTrainingPiecesPreClosing(config:WeatherManPredictionConfig, tickerSymbols, folderPath = None):
+    allSymbolsToTickerData = loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, config.preClosingMinuteSpan, folderPath)
     bounds = {
         "min":None,
         "max":None,
@@ -1580,7 +1591,10 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
     print ("We are about to predict stocks to buy on "+str(finalTime))
 
-    parameters = getAllTrainingPiecesPreClosing(config, tickerSymbols)
+    savedFolder = getSavedFilesFolder()
+    folderPath = str(Path(savedFolder+'/estimateTrainingData/StockDump/'))
+    
+    parameters = getAllTrainingPiecesPreClosing(config, tickerSymbols, folderPath = folderPath)
     allSymbolsToTickerData = parameters["allSymbolsToTickerData"]
     dataIndexToSymbol = parameters["dataIndexToSymbol"]
     allDayIndexes = parameters["dayIndexes"]

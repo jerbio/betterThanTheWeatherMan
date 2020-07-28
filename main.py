@@ -1,14 +1,26 @@
 import datetime
+import pytz
+import requests
+import json
+import os
+import sys
+import tensorflow as tf
+
+# PACKAGE_PARENT = '../../'
+# SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+# sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+PACKAGE_PARENT = '../'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
+
 from implementations.onlypositivedeltas import runExec
 from libfiles.idealpricedsymbols import  maxSymbols, subSetOfTech,SubsetOfFinance, nasdaqPennys, healthcare, symbolDictionary
 from libfiles.downloadstockdata import groupSymbolRequest
-import tensorflow as tf
-from turnkey import generateModel, loadLatestModel, turnTheKey
-import pytz
-from tzlocal import get_localzone # $ pip install tzlocal
-from weathermanpredictionconfig import WeatherManPredictionConfig
-import requests
-import json
+from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
+
+
+
 
 
 # tf.test.is_built_with_cuda()
