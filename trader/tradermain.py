@@ -19,16 +19,9 @@ from stockpicker import StockPicker
 
 
 botTrader = Trader()
-botTrader.addToAvoidedStocks("bcov")
-botTrader.addToAvoidedStocks("LPSN")
-botTrader.addToAvoidedStocks("GLUU")
+# botTrader.addToAvoidedStocks("HSII")
 stocks = list()
-stocks.append('CRTO')
-# stocks.append('VRTU')
-stocks.append('ITRN')
+# stocks.append('ITRN')
 botTrader.buyStocks(stocks)
 # botTrader.endOfDayTrade()
-# activeOrders = botTrader.getInvestedStockPositions();
-# pendingOrders = botTrader.getPendingOrders();
-# botTrader.testRequest();
 

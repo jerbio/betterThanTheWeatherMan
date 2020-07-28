@@ -1310,7 +1310,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 if predictionDayStartDayIndex in allSymbolsToTickerData[symbol]['symbolData']:
                     stockDataWithinWindow.append((symbol, allSymbolsToTickerData[symbol]['symbolData'][predictionDayStartDayIndex]['ticker'][4]))
 
-            subSetCount = int(len(stockDataWithinWindow)/3)
+            subSetCount = int(len(stockDataWithinWindow)/config.highLowStockValueSplitRatio)
             sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:subSetCount]
 
             windowSymbolData = {}
@@ -1626,7 +1626,6 @@ def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     config.percentageDeltaChange = 3
     config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
-    config.stockPerDay = 5
     config.rollingWindow = 1
     config.isOverSampled = True
     config.printMe()

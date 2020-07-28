@@ -23,6 +23,7 @@ class WeatherManPredictionConfig:
         self.highValueStocks = False
         self.allowInflectionPoints = False
         self.allowOtherDayFeatures = True
+        self.highLowStockValueSplitRatio = 3 #Holds the split ratio of the high and low stocks. So If the Split is set 3 the highvalue stocks will be the shares of price in the first percentile and low value in the third percentile
         self.category = 'tech'
         self.exchange = 'nasdaq'
         
@@ -71,6 +72,7 @@ class WeatherManPredictionConfig:
         allowOtherDayFeatures: {self.allowOtherDayFeatures}
         highValueStocks: {self.highValueStocks}
         isOverSampled: {self.isOverSampled}
+        highLowStockValueSplitRatio: {self.highLowStockValueSplitRatio}
         '''
         print(retValue)
 

@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import math
+import copy
 from pathlib import Path
 
 PACKAGE_PARENT = '../'
@@ -30,6 +31,7 @@ class Trader:
         self.credData = {}
         self.robinhood = r
         self.excludedStocks = set()
+        self.robinhoodUsername = None
         self.loadCredentials()
         self.config = WeatherManPredictionConfig()
         self.stockPicker = StockPicker(self.config)
@@ -49,6 +51,7 @@ class Trader:
         robinhoodCredential = self.credData["robinhood"]
         userName = robinhoodCredential["username"]
         password = robinhoodCredential["password"]
+        self.robinhoodUsername = userName
         login = r.login(userName, password)
 
     def getBuyingPower(self):
@@ -130,9 +133,10 @@ class Trader:
         retValue = {}
         for symbol in currentPossiblePositions:
             position = currentPossiblePositions[symbol]
-            if float(position['equity']) != 0:
+            position = self.addPositionProperties(position, symbol)
+            if position['isActive']:
                 retValue[symbol] = position
-        
+
         return retValue
 
     
@@ -141,8 +145,54 @@ class Trader:
         retValue = {}
         for symbol in currentPossiblePositions:
             position = currentPossiblePositions[symbol]
-            if float(position['equity']) == 0:
+            position = self.addPositionProperties(position, symbol)
+            if not position['isActive']:
                 retValue[symbol] = position
+        
+        return retValue
+
+    def getAllPositions(self):
+        currentPossiblePositions = self.robinhood.build_holdings()
+        openOrders = self.robinhood.get_all_open_stock_orders()
+        openOrdersDict = {}
+        if len(openOrders) > 0:
+            for openOrder in openOrders:
+                orderId = openOrder['id']
+                openOrdersDict[orderId] = openOrder
+        
+        retValue = []
+        for symbol in currentPossiblePositions:
+            position = currentPossiblePositions[symbol]
+            position = self.addPositionProperties(position, symbol, openOrdersDict)
+            positionOpenOrders = position['openOrders']
+            if len(positionOpenOrders) > 0:
+                for openOrderId in positionOpenOrders: 
+                    del openOrdersDict[openOrderId]
+            retValue.append(position)
+
+        return retValue
+
+    def addPositionProperties(self, position, symbol, openOrders = {}):
+        retValue = copy.deepcopy(position)
+        isActive = float(position['equity']) != 0
+        isPending = False
+        openOrdersDictForSymbol = {}
+        if len(openOrders) > 0:
+            orders = self.robinhood.find_stock_orders(symbol=symbol)
+            openOrdersForSymbol = [order for order in orders if ('queued' in order['state'] or 'confirmed' in order['state'])]
+            if len(openOrdersForSymbol) > 0:
+                isPending = True
+                for openOrder in openOrdersForSymbol:
+                    orderId = openOrder['id']
+                    openOrdersDictForSymbol[orderId] = openOrder
+
+        
+        
+        retValue['isActive'] = isActive
+        retValue['isPending'] = isPending
+        retValue['symbol'] = symbol.upper()
+        retValue['openOrders'] = openOrdersDictForSymbol
+        retValue['robinhoodUsername'] = self.robinhoodUsername
         
         return retValue
 

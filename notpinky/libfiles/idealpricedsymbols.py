@@ -26,7 +26,7 @@ healthcare = {
 nyseFinance = {
     'category': 'finance',
     'exchange': 'nyse',
-    'symbols': ["BLK","MSCI","GS","AMP","BAP","FRC","PNC","MTB","JPM","ICE","CLC","AMG","CFR","RJF","RY","CM","CNS","CAM","STT","COF","CBM","BOH","EVR","CBU","HLI","PB","BX","BMO","PJT","APO","MS","SF","ALR","DFS","LM","CBG","HDB","TD","PFG","TMH","BNS","ARES","AC","EV","USB","WAL","CMA","BK","SCHW","KKR","BAM","APAM","MIC","NOAH","MAIN","MC","KB","LAZ","AB","CIB","WBS","MGR","NBHC","LMHA","CFG","WFC","FSB","AFC","GEB","GEH","ISP","TCRZ","BAC","CVG","PBB","HSBC","OPY","BMA","BXS","WF","ALLY","BEN","CIT","SNV","BCH","BKU","RSE","HTH","SAR","CODI","BSAC","GEQ","TSLX","GSBD","WDR","CPF","PFS","GWB","WHG","FTAI","OFG","MCI","ASB","GBL","WBK","UBS","KEY","TCAP","CUBI","STL","GHL","IVZ","CS","RF","HTGC","BHLB","BANC","NYCB","DB","TPVG"]
+    'symbols': ["GS","AMP","BAP","FRC","PNC","MTB","JPM","ICE","CFR","RJF","RY","CM","CAM","STT","COF","CBM","BOH","EVR","CBU","HLI","PB","BMO","PJT","MS","SF","ALR","DFS","CBG","HDB","TD","TMH","BNS","USB","WAL","CMA","BK","SCHW","NOAH","MC","KB","LAZ","CIB","WBS","NBHC","CFG","WFC","FSB","GEB","GEH","ISP","BAC","HSBC","OPY","BMA","BXS","WF","ALLY","CIT","SNV","BCH","BKU","HTH","BSAC","CPF","PFS","GWB","WHG","OFG","ASB","WBK","UBS","KEY","TCAP","CUBI","STL","GHL","CS","RF","BHLB","BANC","NYCB","DB","IBN"]
     }
 nyseInsurance = {
     'category': 'insurance',
@@ -40,16 +40,22 @@ nyseManufacturing = {
     }
 turnTheKey = list(subSetOfTech['symbols'][90: 153])
 
-allTheSymbols = list(maxSymbols['symbols'])
-allTheSymbols.extend(subSetOfTech['symbols'])
-allTheSymbols.extend(SubsetOfFinance['symbols'])
-allTheSymbols.extend(nasdaqPennys['symbols'])
-allTheSymbols.extend(nyseFinance['symbols'])
-allTheSymbols.extend(nyseInsurance['symbols'])
-allTheSymbols.extend(nyseManufacturing['symbols'])
+
+symbolGroupings = [maxSymbols, subSetOfTech, SubsetOfFinance, nasdaqPennys, healthcare, nyseFinance, nyseInsurance, nyseManufacturing]
+
+# allTheSymbols = list(maxSymbols['symbols'])
+# allTheSymbols.extend(subSetOfTech['symbols'])
+# allTheSymbols.extend(SubsetOfFinance['symbols'])
+# allTheSymbols.extend(nasdaqPennys['symbols'])
+# allTheSymbols.extend(nyseFinance['symbols'])
+# allTheSymbols.extend(nyseInsurance['symbols'])
+# allTheSymbols.extend(nyseManufacturing['symbols'])
+allTheSymbols = list()
+for symbolGroup in symbolGroupings:
+    allTheSymbols.extend(symbolGroup)
+
 allTheSymbols = list(set(allTheSymbols))
 
-symbolGroupings = [maxSymbols, subSetOfTech, SubsetOfFinance, nasdaqPennys, healthcare, nyseFinance]
 
 symbolDictionary = {}
 
