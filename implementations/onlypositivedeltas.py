@@ -1637,8 +1637,6 @@ def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     # # getPreCloseStocks(tickerSymbols)
     # return
 
-    config.percentageDeltaChange = 3
-    config.numberOfDaysWithPossibleResult = 7
     config.modelRebuildCount = 1
     config.rollingWindow = 1
     config.isOverSampled = True
