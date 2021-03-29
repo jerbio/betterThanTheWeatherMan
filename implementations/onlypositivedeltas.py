@@ -453,6 +453,8 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
             dayIndexRange = orderedDayIndex[beginDayIndexRange: endDayIndexRange]
             dayIndexCounter = 0
             firstIndexOfPercentageDeltaCross = None
+            dayAboveLimit = 0
+            maxAboveDayLimitCount = config.daysExceddingLimits
             for dayIndex in dayIndexRange:
                 activeDayCounter += 1
                 dayData = tickerData[dayIndex]
@@ -489,6 +491,9 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                     maxNegative = percentOpen
                 if percentLow < maxNegative:
                     maxNegative = percentLow
+
+                if maxPositive >= config.percentageDeltaChange:
+                    dayAboveLimit += 1
                 
                 if(firstIndexOfPercentageDeltaCross == None and maxPositive > config.percentageDeltaChange):
                     firstIndexOfPercentageDeltaCross = dayIndexCounter
@@ -505,7 +510,7 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                     allRetroDayIndexes = retroDayData["retroDays"]
                     tickerFeaturesPerDay = retroDayData["tickerFeaturesPerDay"]
                     deltaLimit = config.percentageDeltaChange
-                    maxDelta = 1 if maxPositive > deltaLimit else 0
+                    maxDelta = 1 if dayAboveLimit >= maxAboveDayLimitCount else 0
                     trainingDays.add(day)
                     retValue[day] = {
                         "day": day,
@@ -812,9 +817,9 @@ def buildPredictionModel(config:WeatherManPredictionConfig, trainData, trainResu
 
     ###### Model creation 
     model = tf.keras.Sequential()
-    model.add(layers.LSTM(256, input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
+    model.add(layers.LSTM(config.layer[0], input_shape =(numberOfDaysAsInt,featureLengthPerRetroDay), return_sequences=False, implementation=2))
     model.add(layers.Dropout(config.dropout))
-    model.add(layers.Dense(256, activation='relu'),)
+    model.add(layers.Dense(config.layer[1], activation='relu'),)
     model.add(layers.Dense(optionCount, activation='softmax'))
 
     numberOfEpochs = config.epochCount
