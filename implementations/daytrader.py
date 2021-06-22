@@ -28,12 +28,13 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 from libfiles.loaddataseries import load_time_series_daily, load_time_series_daily_from_preClosing, loadIntraDayStockPrices, loadIntraDayAsTimeSeries
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
+from libfiles.idealpricedsymbols import categoryToIndexSymbols, allTheSymbols, symbolGroupings
 
 
 class dayTrader:
   def __init__(self, config:WeatherManPredictionConfig) -> None:
-    currentDayTicker = loadIntraDayAsTimeSeries('SPY', None)
-    len(currentDayTicker)
+    self.cachedIndexTickers = self.populateCacheIndexTickers()
+    self.symbolTicker = {}
 
     self.closeIndex = ''
     self.openIndex = ''
@@ -42,6 +43,43 @@ class dayTrader:
     self.volIndex = ''
     self.avgPriceIndex = ''
 
+  def buildSymbolDictionary(self):
+    self.symbolGroupingDict = {}
+    self.symbolDict = {}
+    retValue = {}
+    for symbolGrouping in symbolGroupings:
+      for symbol in symbolGroupings[symbolGrouping]:
+        currentDayTicker = loadIntraDayAsTimeSeries(symbol, None)
+        groupingDict = None
+        if symbolGrouping in retValue:
+          groupingDict = retValue[symbolGrouping]
+        else:
+          groupingDict = {}
+          retValue[symbolGrouping] = groupingDict
+        self.symbolDict[symbol] = currentDayTicker
+        groupingDict[symbol] = currentDayTicker
+    
+    self.symbolGroupingDict = retValue
+
+  def trainModel(self):
+    for grouping in self.symbolGroupingDict:
+      correlatingStockData = []
+      categorySymbols = categoryToIndexSymbols[grouping]
+      
+
+
+    return retValue
+
+
+  def populateCacheIndexTickers(self):
+    retValue = {}
+    for category in categoryToIndexSymbols:
+      symbols = categoryToIndexSymbols[category]
+      for symbol in symbols:
+        currentDayTicker = loadIntraDayAsTimeSeries(symbol, None)
+        retValue[symbol] = currentDayTicker
+    
+    return retValue
 
   def trade(self):
     '''Application entry point'''
@@ -100,7 +138,7 @@ class dayTrader:
     return retValue
 
 
-  def createDayTradingFeatures(self, symbol, intraDayTicker, previousDayTickerData, config:WeatherManPredictionConfig, correlatingTickerData, stockMetadata = None):
+  def createDayTradingFeatures(self, symbol, intraDayTicker, correlatingTickerData, previousDayTickerData, config:WeatherManPredictionConfig, stockMetadata = None):
     '''This function takes three parameters, 
     intraDayTicker holds the current intra day ticker price and time, 
     previousDayPrice opening, high, closing price.
