@@ -15,7 +15,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 
 from implementations.onlypositivedeltas import runExec
-from libfiles.idealpricedsymbols import  maxSymbols, subSetOfTech,SubsetOfFinance, nasdaqPennys, healthcare, symbolDictionary
+from libfiles.idealpricedsymbols import  maxSymbols, subSetOfTech,SubsetOfFinance, nasdaqPennys, healthcare, symbolDictionary, categoryToIndexSymbols
 from libfiles.downloadstockdata import groupSymbolRequest
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 
@@ -41,15 +41,17 @@ config = WeatherManPredictionConfig()
 config.category = 'tech'
 config.exchange = 'nasdaq'
 config.highValueStocks = False
-config.allowInflectionPoints = True
-config.allowOtherDayFeatures = True
+# config.allowInflectionPoints = True
+# config.allowOtherDayFeatures = True
 config.highLowStockValueSplitRatio = 2
 config.stockPerDay = 3
 config.percentageDeltaChange = 10
 config.numberOfDaysWithPossibleResult = 25
 config.numberOfDaysForTraining = 180
-config.numberOfRetroDays = 240
+config.numberOfRetroDays = 90
+config.layer[0] = 512
+config.layer[1] = 512
 print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nBegan At"); 
-runExec(config, symbolDictionary[config.category][config.exchange])
+runExec(config, symbolDictionary[config.category][config.exchange], ['SPY'])
 print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nEnded At"+str(datetime.datetime.now()))
 

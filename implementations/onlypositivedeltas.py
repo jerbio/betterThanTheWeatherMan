@@ -219,7 +219,7 @@ def getNextDayIndex(dayIndex, tickerData):
 
 
 
-def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIndexData, symbol, dayOfPrediction):
+def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIndexData, symbol, dayOfPrediction, categoryStockData=None):
     
     if dayOfPrediction not in tickerData:
         raise Exception('dayOfPrediction is not witihin ticker data ')
@@ -365,6 +365,11 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
                 for precedingDayInflectionFeatures in inflectionPointFeatures:
                     dataForDay.extend(precedingDayInflectionFeatures)
         precedingNintyDays.extend(dataForDay)
+        if categoryStockData is not None:
+            for key in categoryStockData.keys():
+                categoryFeatures = categoryStockData[key][day]
+                categoryPrecedingNinty = categoryFeatures["precedingDays"]
+                precedingNintyDays.extend(categoryPrecedingNinty)
         retroTrainingDays +=1
         featureLen = len(dataForDay)
         if tickerFeaturesPerDay is None:
@@ -388,7 +393,7 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
 
     return retValue
 
-def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, earliestDay = None, latestDay = None, symbolIndex = 0, dayCount = None):
+def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, earliestDay = None, latestDay = None, symbolIndex = 0, dayCount = None, categoryStockData=None):
     '''
     function gets X consecutive future days of stock data within the time frame of 'earliestDay  and 'latestDay' data. 
     X is provided with the arg 'dayCount'. These day points have to be within tickerData.
@@ -503,7 +508,7 @@ def getDayOutlook(config:WeatherManPredictionConfig, tickerData, dayIndexData, e
                 dayIndexCounter+=1
 
             if not ignoreDay:
-                retroDayData = getRetroDayTrainingData(config, tickerData, dayIndexData, symbolIndex, dayOfPrediction)
+                retroDayData = getRetroDayTrainingData(config, tickerData, dayIndexData, symbolIndex, dayOfPrediction, categoryStockData)
                 if retroDayData is not None:
                     featureLen = retroDayData["featureLengthPerRetroDay"]
                     precedingNintyDays = retroDayData["precedingDays"]
@@ -1252,7 +1257,7 @@ def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
     retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
     return retValue
 
-def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig):
+def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, config:WeatherManPredictionConfig, categorySymbols):
     if( boundEndTime is None):
         boundEndTime = datetime.datetime.now()
     numberOfDaysForTraining = config.numberOfDaysForTraining
@@ -1260,7 +1265,10 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     entryDayEndIndex = dayIndexFromTime(boundEndTime)
     outlookDayLimit = config.numberOfDaysWithPossibleResult
     
-    parameters = getAllTrainingPieces(config, tickerSymbols)
+    allSymbols = []
+    allSymbols.extend(tickerSymbols)
+    allSymbols.extend(categorySymbols)
+    parameters = getAllTrainingPieces(config, allSymbols)
 
 
     bounds = parameters["bounds"]
@@ -1328,13 +1336,16 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
 
             subSetCount = int(len(stockDataWithinWindow)/config.highLowStockValueSplitRatio)
             sortedSymbolDataByPrice = sorted(stockDataWithinWindow, key=lambda dayData: dayData[1], reverse= config.highValueStocks)[:subSetCount]
+            if len(stockDataWithinWindow) > 0:
+                categorySymbolByPrice = [stockDataWithinWindow[dataIndexToSymbol[categorySymbol]] for categorySymbol in categorySymbols]
+                sortedSymbolDataByPrice.extend(categorySymbolByPrice)
 
             windowSymbolData = {}
             for symbolAndPrice in sortedSymbolDataByPrice:
                 windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
 
             if rebuildModel and len(stockDataWithinWindow) > 0:
-                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing=False)
+                modelProcess = getBestModel(config, windowSymbolData, categorySymbols, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing=False)
                 rollingTwenties.append(modelProcess)
                 if(len(rollingTwenties) > config.rollingWindow):
                     rollingTwenties.pop(0)
@@ -1445,15 +1456,12 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     else:
         print("Nothing to buy")
 
-def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing = True):
-    retValue = None
-    models = []
-    modelRebuildCounter = 0
-    symbolToDayData = {}
+
+def getCategoryData(config:WeatherManPredictionConfig, categorySymbols, allSymbolsToTickerData, trainingStartTime, trainingEndTime, printSomeThing = True):
+    retValue = {}
     numberOfDaysForTraining = config.numberOfDaysForTraining
-    symbolReadStart = datetime.datetime.now()
-    for symbol in allSymbolsToTickerData:
-        if symbol not in symbolToDayData:
+    for symbol in categorySymbols:
+        if symbol not in retValue:
             tickerData = allSymbolsToTickerData[symbol]["symbolData"]
             dayIndexData = allSymbolsToTickerData[symbol]["formatedIndexes"]
             print("symbol is "+ str(symbol))
@@ -1461,6 +1469,33 @@ def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, data
             
             if stockDataDayCount > numberOfDaysForTraining:
                 outlookResult = getDayOutlook(config, tickerData, dayIndexData, trainingStartTime, trainingEndTime, symbolIndex = symbol)
+                retValue[symbol] = outlookResult
+            else:
+                print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
+
+    return retValue
+
+
+def getBestModel(config:WeatherManPredictionConfig, allSymbolsToTickerData, categorySymbols, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing = True, ):
+    retValue = None
+    models = []
+    modelRebuildCounter = 0
+    symbolToDayData = {}
+    numberOfDaysForTraining = config.numberOfDaysForTraining
+    symbolReadStart = datetime.datetime.now()
+
+    
+    categoryData = getCategoryData(config, categorySymbols, allSymbolsToTickerData, trainingStartTime, trainingEndTime, printSomeThing = True)
+
+    for symbol in allSymbolsToTickerData:
+        if symbol not in symbolToDayData and symbol not in categoryData:
+            tickerData = allSymbolsToTickerData[symbol]["symbolData"]
+            dayIndexData = allSymbolsToTickerData[symbol]["formatedIndexes"]
+            print("symbol is "+ str(symbol))
+            stockDataDayCount = len(tickerData)
+            
+            if stockDataDayCount > numberOfDaysForTraining:
+                outlookResult = getDayOutlook(config, tickerData, dayIndexData, trainingStartTime, trainingEndTime, symbolIndex = symbol, categoryStockData=categoryData)
                 symbolToDayData[symbol] = outlookResult
             else:
                 print("Insufficient data for "+ symbol+"\nTotal days is : "+str(numberOfDaysForTraining)+"\nStock Days is :"+str(stockDataDayCount))
@@ -1535,7 +1570,7 @@ def getStockSuggestionSymbolToData(config:WeatherManPredictionConfig, allSymbols
     return symbolToDayData
     
 
-def getStocks(tickerSymbols, date=None):
+def getStocks(tickerSymbols, categorySymbols, date=None):
     config = WeatherManPredictionConfig()
     config.epochCount = 200
     config.modelRebuildCount = 3
@@ -1556,7 +1591,7 @@ def getStocks(tickerSymbols, date=None):
 
     trainingStartTIme = earliestTime
     trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
-    model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
+    model = getBestModel(config, allSymbolsToTickerData, categorySymbols, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     retryCountLimit = 4
     retryCount = 0
@@ -1582,7 +1617,7 @@ def getStocks(tickerSymbols, date=None):
         print ("Cannot predict stock because the time provided is not within")
 
 
-def getPreCloseStocks(tickerSymbols, date=None):
+def getPreCloseStocks(tickerSymbols, categorySymbols, date=None):
     config = WeatherManPredictionConfig()
     config.epochCount = 200
     config.modelRebuildCount = 3
@@ -1606,7 +1641,7 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
     trainingStartTIme = earliestTime
     trainingEndTime = finalTime + datetime.timedelta(days=(-config.numberOfDaysWithPossibleResult))
-    model = getBestModel(config, allSymbolsToTickerData, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
+    model = getBestModel(config, allSymbolsToTickerData, categorySymbols, dataIndexToSymbol, trainingStartTIme, trainingEndTime)["model"]
     predictionStartTime = finalTime
     retryCountLimit = 4
     retryCount = 0
@@ -1633,12 +1668,12 @@ def getPreCloseStocks(tickerSymbols, date=None):
 
 
 
-def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
+def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None, categorySymbols = None):
     if config is None:
         config = WeatherManPredictionConfig()
     config.iterationNotes = ''''''
     
-    # getStocks(tickerSymbols)
+    # getStocks(tickerSymbols, categorySymbols)
     # # getPreCloseStocks(tickerSymbols)
     # return
 
@@ -1659,7 +1694,7 @@ def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     finalTime = currentTime  + datetime.timedelta(days=(0))
     confidenceAnalysisStart = datetime.datetime.now()
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
-    dayIntervalConfidenceTest(earliestTime, finalTime, tickerSymbols, config)
+    dayIntervalConfidenceTest(earliestTime, finalTime, tickerSymbols, config, categorySymbols)
     print("Analysis is "+str(earliestTime)+" to "+str(finalTime))
     confidenceAnalysisEnd = datetime.datetime.now()
     timeSpan = confidenceAnalysisEnd - confidenceAnalysisStart
