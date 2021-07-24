@@ -28,12 +28,13 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 from libfiles.loaddataseries import load_time_series_daily, load_time_series_daily_from_preClosing, loadIntraDayStockPrices, loadIntraDayAsTimeSeries
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
-from libfiles.idealpricedsymbols import categoryToIndexSymbols, allTheSymbols, symbolGroupings
+from libfiles.idealpricedsymbols import categoryToIndexSymbols, allTheSymbols, symbolGroupings, symbolToCategory
 
 
-class dayTrader:
+class DayTraderTrainer:
   def __init__(self, config:WeatherManPredictionConfig) -> None:
-    self.cachedIndexTickers = self.populateCacheIndexTickers()
+    self.cachedIndexTickers = None
+    self.symbolGroupingDict = None
     self.symbolTicker = {}
 
     self.closeIndex = ''
@@ -48,14 +49,16 @@ class dayTrader:
     self.symbolDict = {}
     retValue = {}
     for symbolGrouping in symbolGroupings:
-      for symbol in symbolGroupings[symbolGrouping]:
+      symbols = symbolGrouping['symbols']
+      symbols = symbols[:5]
+      for symbol in symbols:
         currentDayTicker = loadIntraDayAsTimeSeries(symbol, None)
         groupingDict = None
-        if symbolGrouping in retValue:
-          groupingDict = retValue[symbolGrouping]
+        if symbol in retValue:
+          groupingDict = retValue[symbol]
         else:
           groupingDict = {}
-          retValue[symbolGrouping] = groupingDict
+          retValue[symbol] = groupingDict
         self.symbolDict[symbol] = currentDayTicker
         groupingDict[symbol] = currentDayTicker
     
@@ -71,6 +74,34 @@ class dayTrader:
     return retValue
 
 
+  def initializeTrainingELements(self):
+    self.buildSymbolDictionary()
+    self.populateCacheIndexTickers()
+
+
+  def getSymbolFeatures(self, symbol, symbolDict, categorySymbolDict):
+    symbolPrices = symbolDict[symbol]
+    categories = symbolToCategory[symbol]
+    category = categories[0]
+    categorySymbols = categoryToIndexSymbols[category]
+    
+    categoryPrices = categorySymbolDict[category]
+    
+
+  def buildFeatures(self):
+    if self.symbolGroupingDict and self.cachedIndexTickers:
+      symbols = self.symbolGroupingDict.keys()
+      for symbol in symbols:
+        featureResults = self.getSymbolFeatures(symbol, self.symbolGroupingDict, self.cachedIndexTickers)
+        result = featureResults['result']
+
+
+
+    raise '''Have you initialized symbolGroupingDict and cachedIndexTickers,
+    you need to call self.buildSymbolDictionary()
+    self.populateCacheIndexTickers()'''
+
+
   def populateCacheIndexTickers(self):
     retValue = {}
     for category in categoryToIndexSymbols:
@@ -79,13 +110,17 @@ class dayTrader:
         currentDayTicker = loadIntraDayAsTimeSeries(symbol, None)
         retValue[symbol] = currentDayTicker
     
+
+    self.cachedIndexTickers = retValue
     return retValue
 
-  def trade(self):
+  def train(self):
     '''Application entry point'''
     self.config = WeatherManPredictionConfig()
     self.config.isIntraday=True
     self.config.percentageDeltaChange = 1
+    self.buildFeatures()
+
 
   def tickerDataResult(self, tickerData, otherTickerData, config:WeatherManPredictionConfig):
     '''This evaluates the results of ticker based on prices'''

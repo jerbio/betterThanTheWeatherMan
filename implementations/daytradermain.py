@@ -22,10 +22,11 @@ from libfiles.loaddataseries import load_time_series_daily, load_time_series_dai
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
 
-from daytrader import dayTrader
+from daytradertrainer import DayTraderTrainer
 
 
 config = WeatherManPredictionConfig
-daytrader = dayTrader(config)
+trainer = DayTraderTrainer(config)
+trainer.initializeTrainingELements()
 
-daytrader.trade()
+trainer.train()
