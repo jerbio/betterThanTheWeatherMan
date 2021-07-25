@@ -1,6 +1,7 @@
 import json
 import datetime
 import random
+import pandas as pd
 import tensorflow as tf
 from pathlib import Path
 from tensorflow import keras
@@ -24,7 +25,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-from libfiles.loaddataseries import load_time_series_daily, load_pre_time_series
+from libfiles.loaddataseries import load_time_series_daily
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
 
@@ -60,6 +61,39 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
     return retValue
 
 
+def computeRSI(dayIndex, timeData, dayIndexData, config: WeatherManPredictionConfig):
+    dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
+    orderedDayIndex = dayIndexData['orderedDayIndex']
+    dayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, config.rsiWindow+1)
+    
+    closeIndex = 3
+    priceDeltas = []
+    upDeltas = []
+    downDeltas = []
+    prevTimeData = None
+    for dayIndex in dayIndexes:
+        currentTimeData = timeData[dayIndex]['ticker']
+        if prevTimeData is not None:
+            currentTimeData = timeData[dayIndex]['ticker']
+            previousClosePrice = prevTimeData[closeIndex]
+            closePrice = currentTimeData[closeIndex]
+            delta = closePrice - previousClosePrice
+            priceDeltas.append(delta)
+            if delta > 0:
+                upDeltas.append(delta)
+                downDeltas.append(0)
+            else:
+                downDeltas.append(delta)
+                upDeltas.append(0)
+        
+        prevTimeData = currentTimeData
+
+    roll_up1 = sum(upDeltas)/len(upDeltas)
+    roll_down1 = abs(sum(downDeltas)/len(downDeltas))
+    RS = 100 if roll_down1 == 0.0 else roll_up1 / roll_down1
+    RSI = 100.0 - (100.0 / (1.0 + RS))
+
+    return (RSI, RS)
 
 def getPreceedingDayInflectionFeatures(dayIndex, timeData, dayIndexData):
     dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
@@ -364,7 +398,12 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
             if inflectionPointFeatures is not None:
                 for precedingDayInflectionFeatures in inflectionPointFeatures:
                     dataForDay.extend(precedingDayInflectionFeatures)
+        
+        
+        RSResults = computeRSI(dayOfPrediction, tickerData, dayIndexData, config)
+        precedingNintyDays.append(RSResults[1])
         precedingNintyDays.extend(dataForDay)
+
         retroTrainingDays +=1
         featureLen = len(dataForDay)
         if tickerFeaturesPerDay is None:
@@ -1636,7 +1675,6 @@ def getPreCloseStocks(tickerSymbols, date=None):
 def runExec(config:WeatherManPredictionConfig = None, tickerSymbols = None):
     if config is None:
         config = WeatherManPredictionConfig()
-    config.iterationNotes = ''''''
     
     # getStocks(tickerSymbols)
     # # getPreCloseStocks(tickerSymbols)

@@ -41,15 +41,17 @@ config = WeatherManPredictionConfig()
 config.category = 'tech'
 config.exchange = 'nasdaq'
 config.highValueStocks = False
-config.allowInflectionPoints = True
-config.allowOtherDayFeatures = True
+config.allowInflectionPoints = False
+config.allowOtherDayFeatures = False
 config.highLowStockValueSplitRatio = 2
 config.stockPerDay = 3
 config.percentageDeltaChange = 10
 config.numberOfDaysWithPossibleResult = 25
 config.numberOfDaysForTraining = 180
 config.numberOfRetroDays = 240
-print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nBegan At"); 
+config.iterationNotes = 'Using THE RS and not RSI'
+config.layer = [512, 512]
+print("\n\n\nUsing THE RS and not RSI "+str(config.category)+" for "+str(config.exchange)+" exchange\nBegan At"); 
 runExec(config, symbolDictionary[config.category][config.exchange])
 print("\n\n\nUsing "+str(config.category)+" for "+str(config.exchange)+" exchange\nEnded At"+str(datetime.datetime.now()))
 
