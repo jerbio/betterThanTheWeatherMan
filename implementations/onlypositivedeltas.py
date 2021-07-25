@@ -25,7 +25,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-from libfiles.loaddataseries import load_time_series_daily
+from libfiles.loaddataseries import load_time_series_daily, load_time_series_daily_from_preClosing
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
 from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
 
@@ -1163,7 +1163,7 @@ def loadAllPreCloseSymbolTickerDataIntoMemory(tickerSymbols, precedingMinuteSpan
         else:
             folderPath = str(Path('../../savedFiles/estimateTrainingData/StockDump/'))
     for symbol in tickerSymbols:
-        tickerData = load_pre_time_series(symbol, precedingMinuteSpan=precedingMinuteSpan, folderPath = folderPath)
+        tickerData = load_time_series_daily_from_preClosing(symbol, precedingMinuteSpan=precedingMinuteSpan, folderPath = folderPath)
         if (tickerData):
             retValue[symbol] = tickerData
     return retValue
@@ -1373,7 +1373,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                 windowSymbolData[symbolAndPrice[0]] = allSymbolsToTickerData[symbolAndPrice[0]]
 
             if rebuildModel and len(stockDataWithinWindow) > 0:
-                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing=False)
+                modelProcess = getBestModel(config, windowSymbolData, dataIndexToSymbol, trainingStartTime, trainingEndTime, printSomeThing=config.isVerbose)
                 rollingTwenties.append(modelProcess)
                 if(len(rollingTwenties) > config.rollingWindow):
                     rollingTwenties.pop(0)
