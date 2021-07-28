@@ -64,7 +64,7 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
 def computeRSI(dayIndex, timeData, dayIndexData, config: WeatherManPredictionConfig):
     dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
     orderedDayIndex = dayIndexData['orderedDayIndex']
-    dayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, config.rsiWindow+1)
+    dayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -config.rsiWindow)
     
     closeIndex = 3
     priceDeltas = []
