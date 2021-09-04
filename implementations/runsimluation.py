@@ -17,7 +17,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from datafiles.simultationDistribution import indexDistribution
-from weatherutility import getSymbolTickerDataForDayIndex, getDayIndexes, timeFromDayIndex, dayIndexFromTime
+from libfiles.weatherutility import getSymbolTickerDataForDayIndex, getDayIndexes, timeFromDayIndex, dayIndexFromTime
 from libfiles.loaddataseries import load_time_series_daily
 from libfiles.idealpricedsymbols import allTheSymbols, turnTheKey, nasdaqPennys, subSetOfTech, healthcare, SubsetOfFinance
 

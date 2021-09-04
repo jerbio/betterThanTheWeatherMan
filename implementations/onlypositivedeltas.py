@@ -64,7 +64,7 @@ def  precedingDayIndexes(currentDayIndex, dayCount, tickerDictionary):
 def computeRSI(dayIndex, timeData, dayIndexData, config: WeatherManPredictionConfig):
     dayIndexToListIndex = dayIndexData['dayIndexToListIndex']
     orderedDayIndex = dayIndexData['orderedDayIndex']
-    dayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -config.rsiWindow)
+    dayIndexes = getDayIndexByDelta(orderedDayIndex, dayIndexToListIndex, dayIndex, -(config.rsiWindow-1))
     
     closeIndex = 3
     priceDeltas = []
@@ -399,9 +399,9 @@ def getRetroDayTrainingData(config:WeatherManPredictionConfig, tickerData, dayIn
                 for precedingDayInflectionFeatures in inflectionPointFeatures:
                     dataForDay.extend(precedingDayInflectionFeatures)
         
-        
-        RSResults = computeRSI(dayOfPrediction, tickerData, dayIndexData, config)
-        precedingNintyDays.append(RSResults[1])
+        if config.rsiWindow > 0:
+            RSResults = computeRSI(dayOfPrediction, tickerData, dayIndexData, config)
+            precedingNintyDays.append(RSResults[0])
         precedingNintyDays.extend(dataForDay)
 
         retroTrainingDays +=1
