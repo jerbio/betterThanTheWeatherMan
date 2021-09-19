@@ -12,8 +12,9 @@ import math
 import matplotlib.pyplot as plt
 from numpy import array, transpose
 
-import sys
 import os
+import sys
+import errno
 
 PACKAGE_PARENT = '../../'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
@@ -27,7 +28,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 from libfiles.loaddataseries import load_time_series_daily, load_time_series_daily_from_preClosing
 from libfiles.weathermanpredictionconfig import WeatherManPredictionConfig
-from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder
+from libfiles.weatherutility import dayIndexFromTime, timeFromDayIndex, getDayIndexByDelta, getSavedFilesFolder, SetEncoder
 
 # config = tf.ConfigProto()
 # config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -1285,7 +1286,40 @@ def getBestOfRollers(rollingTwenties):
     
     return retValue
 
+def writePredictionHistory(predictionLog, filePath = None):
+    try:
+        configDict = None
+        filePathToWrite = filePath
+        jsonOuput = {}
+        
+        if 'config' in predictionLog:
+            config = predictionLog['config']
+            jsonOuput['config'] = config
+            if config.__dict__:
+                configDict = config.__dict__
+                jsonOuput['config'] = configDict
+            
+            if filePath is None and config.predictionTrainingHistoryRelativePath:
+                filePathToWrite = config.predictionTrainingHistoryRelativePath
+                filePathToWrite = str(Path(os.path.dirname(__file__) + '/' + filePathToWrite)) 
+        
+        if 'eachdayAssessment' in predictionLog:
+            jsonOuput['eachdayAssessment'] = predictionLog['eachdayAssessment']
 
+        fileFullPath = str(Path(filePathToWrite))
+        if not os.path.exists(os.path.dirname(fileFullPath)):
+            try:
+                os.makedirs(os.path.dirname(fileFullPath))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+
+        with open(fileFullPath, 'w') as outfile:
+            json.dump(jsonOuput, outfile, cls=SetEncoder, indent=4)
+    except Exception as inst:
+        print('failed to write prediction output')
+        print (str(inst))
 
 def getSymbolTickerDataForDayIndex(allSymbolsToTickerData, symbol, dayIndex):
     retValue = allSymbolsToTickerData[symbol]['symbolData'][dayIndex]['ticker']
@@ -1344,6 +1378,10 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
     rollingTwenties = []
     dayIndexDistribution = {}
     modelProcess = None
+    outputlog = {
+        'config' : config,
+        'eachdayAssessment' : eachdayAssessment
+    }
     while trainingDayEndIndex <= loopMaxIndex:
         trainingStartTime = timeFromDayIndex(trainingDayStartIndex)
         trainingEndTime = timeFromDayIndex(trainingDayEndIndex)
@@ -1434,6 +1472,7 @@ def dayIntervalConfidenceTest(boundStartTime, boundEndTime, tickerSymbols, confi
                     else:
                         eachdayAssessment[predictionDayStartDayIndex] = predictionsResults
                     predictionsResults.append(modelAssessment)
+                    writePredictionHistory(outputlog)
                     dayFinalAccuracyRatio = (correctPredictions/totalOnesPredicted)
                     sumOfPredictionSuccessRatio+=dayFinalAccuracyRatio
                     dayFinalAccuracy =  dayFinalAccuracyRatio * 100

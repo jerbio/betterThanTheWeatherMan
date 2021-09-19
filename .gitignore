@@ -13,3 +13,4 @@ datafiles/*
 */.vs/*
 .vs/*
 *credential.json*
+implementations/traininghistory/*
