@@ -1233,10 +1233,14 @@ def getAllTrainingPieces(config:WeatherManPredictionConfig, tickerSymbols):
     dayIndexes = set()
     dataIndexToSymbol = {}
     symbolCounter = 0
-    for entry in allSymbolsToTickerData:
+    allSymbols = list(allSymbolsToTickerData.keys())
+    for entry in allSymbols:
         currentMin = bounds["min"]
         currentMax = bounds["max"]
         symbolInfo = allSymbolsToTickerData[entry]
+        if len(symbolInfo) == 0:
+            del allSymbolsToTickerData[entry]
+            continue
         stockDayIndexMin = symbolInfo["dayBounds"]["min"]
         stockDayIndexMax = symbolInfo["dayBounds"]["max"]
         symbolDayIndexes = symbolInfo["allDayIndexes"]
