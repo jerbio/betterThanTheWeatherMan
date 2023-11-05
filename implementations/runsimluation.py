@@ -485,8 +485,10 @@ class WeathermanTimelineSimulator:
             processedDaIndexes.add(dayIndex)
             self.realizeTrades(dayIndex)
             if(dayIndex in self.simulationTape):
-                boughtStocks = self.simulationTape[dayIndex][0]['toBeBoughtStocks']
+                boughtStocks = list(self.simulationTape[dayIndex][0]['toBeBoughtStocks'])
+                random.shuffle(boughtStocks)
                 if boughtStocks is not None and len(boughtStocks) > 0:
+                    boughtStocks = boughtStocks[0:math.ceil(len(boughtStocks) * 0.75)]
                     numberOfStocks = len(boughtStocks)
                     prevPurse = self.purse
                     pursePerStock = float(((self.purse))/numberOfStocks)
@@ -534,6 +536,14 @@ def runMSimulationsFromRemotePredictions(simulationCount = 500):
     global foundSymbols
     excludedSymbols = set()
     excludedSymbols.add('IOTS')
+    excludedSymbols.add('FEYE')
+    excludedSymbols.add('FB')
+    excludedSymbols.add('BRKS')
+    excludedSymbols.add('JCOM')
+    excludedSymbols.add('BXS')
+    excludedSymbols.add('INOV')
+    excludedSymbols.add('TBIO')
+    excludedSymbols.add('STL')
     indexCounter = 0
     sumOfSimulations = 0
 
@@ -645,7 +655,7 @@ def runMSimulationsFromRemotePredictions(simulationCount = 500):
 
 
 
-runMSimulationsFromRemotePredictions(200)
+runMSimulationsFromRemotePredictions()
 
 
 def runMultipleSimulations(simulationCount = 500):
