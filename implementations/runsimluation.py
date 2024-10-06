@@ -18,7 +18,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 from datafiles.simultationDistribution import indexDistribution
-from libfiles.weatherutility import getSymbolTickerDataForDayIndex, getDayIndexes, timeFromDayIndex, dayIndexFromTime, getRemotePredictions
+from libfiles.weatherutility import getSymbolTickerDataForDayIndex, getDayIndexes, timeFromDayIndex, dayIndexFromTime, getRemotePredictions, getLocalPredictions
 from libfiles.loaddataseries import load_time_series_daily
 from libfiles.idealpricedsymbols import allTheSymbols, turnTheKey, nasdaqPennys, subSetOfTech, healthcare, SubsetOfFinance
 
@@ -85,7 +85,7 @@ class WeathermanTimelineSimulator:
                 dayIndexData = {}
                 dayIndexToSymbol[dayIndex] = dayIndexData
             
-            if symbol in dayIndexData and tickerData['timeOfPrediction'] < dayIndexData[symbol]['timeOfPrediction']:
+            if symbol in dayIndexData and 'timeOfPrediction' in tickerData and tickerData['timeOfPrediction'] < dayIndexData[symbol]['timeOfPrediction']:
                 symbolPrediction = dayIndexData[symbol]
             else:
                 symbolPrediction = tickerData
@@ -477,8 +477,12 @@ class WeathermanTimelineSimulator:
         # indexCounter = 0
         # indexCounter = int(dayIndexCounter/2)
         processedDaIndexes = set()
-        divisor = 2
+        divisor = 1
         countLimit = int((len(self.orderedDayIndexes))/divisor)
+        indexCounter = 1
+        countLimit = len(self.orderedDayIndexes) - 30
+        # indexCounter = 20
+        # countLimit = 200
         self.firstProccessedDayIndex = self.orderedDayIndexes[indexCounter]
         while indexCounter < countLimit:
             dayIndex = self.orderedDayIndexes[indexCounter]
@@ -544,6 +548,11 @@ def runMSimulationsFromRemotePredictions(simulationCount = 500):
     excludedSymbols.add('INOV')
     excludedSymbols.add('TBIO')
     excludedSymbols.add('STL')
+    #No lnonger valid symbols
+    excludedSymbols.add('RCII')
+    excludedSymbols.add('CPSI')
+    excludedSymbols.add('FRC')
+    excludedSymbols.add('ALR')
     indexCounter = 0
     sumOfSimulations = 0
 
@@ -554,31 +563,41 @@ def runMSimulationsFromRemotePredictions(simulationCount = 500):
         pctToPredictions = {}
         retValue = []
         for prediction in predictions:
+            predictionJson = {}
             if 'tickerData' in prediction and prediction['tickerData'] is not None:
                 loadedJson = json.loads(prediction['tickerData'])
                 prediction['tickerData'] = loadedJson
                 retValue.append(prediction)
-                if 'extrapolatedTicker' in loadedJson:
-                    extrapolatedTicker = loadedJson['extrapolatedTicker']
-                    closePrice = extrapolatedTicker[3]
-                    openPrice = extrapolatedTicker[0]
-                    pct = ((closePrice - openPrice)/openPrice) * 100
-                    pctAppr = round(pct , 0)
-                    predictionsForPct = []
-                    if pctAppr in pctToPredictions:
-                        predictionsForPct = pctToPredictions[pctAppr]
-                    else:
-                        pctToPredictions[pctAppr] = predictionsForPct
+                predictionJson = loadedJson
+            else:
+                predictionJson = prediction
+                predictionJson["tickerData"] = prediction
+                retValue.append(prediction)
+            if 'extrapolatedTicker' in predictionJson:
+                extrapolatedTicker = predictionJson['extrapolatedTicker']
+                closePrice = extrapolatedTicker[3]
+                openPrice = extrapolatedTicker[0]
+                pct = ((closePrice - openPrice)/openPrice) * 100
+                pctAppr = round(pct , 0)
+                predictionsForPct = []
+                if pctAppr in pctToPredictions:
+                    predictionsForPct = pctToPredictions[pctAppr]
+                else:
+                    pctToPredictions[pctAppr] = predictionsForPct
 
-                    predictionsForPct.append(prediction)
+                predictionsForPct.append(prediction)
             
         return retValue
 
 
     minMultiplier = None
     maxMultiplier = None
+
+    localPredictions = getLocalPredictions(19950)
+    # return
     
-    predictions = getRemotePredictions()
+    # predictions = getRemotePredictions()
+    predictions = localPredictions["tech"]["predictions"]
     predictions = [prediction for prediction in predictions if prediction['symbol'] not in excludedSymbols]
     dedupedSymbols = [prediction['symbol'] for prediction in predictions]
     foundSymbols = list(set(dedupedSymbols))
@@ -604,7 +623,7 @@ def runMSimulationsFromRemotePredictions(simulationCount = 500):
     simulationInitObj = WeathermanTimelineSimulator(percentDelta, 1)
     # print(str(categoryGrouping.keys()))
     stockCategory = 'tech'
-    predictions = categoryGrouping[stockCategory]
+    # predictions = categoryGrouping[stockCategory]
 
     parsedPredictions = groupAnalysis(predictions)
 
